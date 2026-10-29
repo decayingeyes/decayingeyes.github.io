@@ -41,6 +41,25 @@
           <p class="muted small">ตรวจว่าเป็นคนในงานจริงก่อนอนุมัติ · อนุมัติแล้วจะเป็น "สมาชิก" ทีม "ยังไม่จัดทีม" · ปฏิเสธแล้วรหัสนั้นสมัครใหม่ได้</p>
           <div id="signups"></div>
         </section>
+        <div class="card join-box">
+          <div class="mr-head">
+            <b>🔑 รหัสเข้าร่วมงาน (รหัสกลาง)</b>
+            <span class="code-big small-code" id="join-code">…</span>
+          </div>
+          <p class="muted small">ใส่ตอนสมัครแล้ว<b>เข้าใช้ได้ทันที</b>เป็นสมาชิกธรรมดา · ส่งให้เฉพาะคนในงาน · ถ้ารหัสหลุดไปคนนอก กด "สร้างรหัสใหม่" รหัสเก่าจะใช้ไม่ได้ทันที</p>
+          <div class="two">
+            <button class="btn secondary" id="copy-join-link" type="button">📋 คัดลอกลิงก์สมัคร (ใส่รหัสให้แล้ว)</button>
+            <button class="btn secondary" id="regen-join" type="button">🔄 สร้างรหัสใหม่</button>
+          </div>
+          <div class="confirm" id="regen-confirm" hidden>
+            <div>สร้างรหัสใหม่? รหัสเดิมและลิงก์เดิมจะใช้ไม่ได้อีก</div>
+            <div class="two">
+              <button class="btn in" id="regen-yes" type="button">ยืนยัน</button>
+              <button class="btn secondary" id="regen-no" type="button">ยกเลิก</button>
+            </div>
+          </div>
+          <p class="msg" id="join-msg"></p>
+        </div>
         <div class="role-summary" id="role-summary"></div>
 
         <details class="card import-box" id="import-box">
@@ -258,6 +277,36 @@
           });
         });
       }
+
+      // ---------- shared join code ----------
+      var joinCode = '';
+      function signupLink() {
+        var base = location.href.replace(/admin\.html.*$/, 'register.html');
+        return base + '?join=' + encodeURIComponent(joinCode);
+      }
+      function loadJoinCode(regenerate) {
+        return HH.call('signup.joinCode', { regenerate: !!regenerate }).then(function (res) {
+          if (!res.ok) { HH.say($('join-msg'), HH.errorText(res), 'bad'); return; }
+          joinCode = res.data.joinCode;
+          $('join-code').textContent = joinCode;
+        });
+      }
+      $('copy-join-link').addEventListener('click', function () {
+        var link = signupLink();
+        var done = function () { HH.say($('join-msg'), 'คัดลอกแล้ว: ' + link, 'ok'); };
+        if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, function () { HH.say($('join-msg'), link, 'ok'); });
+        else HH.say($('join-msg'), link, 'ok');
+      });
+      $('regen-join').addEventListener('click', function () { $('regen-confirm').hidden = false; });
+      $('regen-no').addEventListener('click', function () { $('regen-confirm').hidden = true; });
+      $('regen-yes').addEventListener('click', function () {
+        HH.busy($('regen-yes'), true, '…');
+        loadJoinCode(true).then(function () {
+          HH.busy($('regen-yes'), false);
+          $('regen-confirm').hidden = true;
+          HH.say($('join-msg'), 'สร้างรหัสใหม่แล้ว — ส่งรหัส/ลิงก์ใหม่ให้คนในงาน', 'ok');
+        });
+      });
 
       function loadMembers() {
         membersLoaded = true;
@@ -551,6 +600,7 @@
       loadApprovals().then(function (ok) {
         if (!ok) return;
         loadSignups();
+        loadJoinCode(false);
         var start = (location.hash || '#approve').slice(1);
         showTab(['approve', 'members', 'periods'].indexOf(start) !== -1 ? start : 'approve');
       });

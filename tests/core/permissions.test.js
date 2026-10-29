@@ -9,7 +9,7 @@ const SPEC_ACTIONS = [
   'me.card', 'me.today', 'me.history', 'me.schedule', 'me.reports', 'me.report.create', 'me.selfReport',
   'scan.lookup', 'scan.confirm',
   'team.status', 'team.reports', 'team.report.resolve', 'team.activationCode.issue', 'photo.set', 'correction.propose',
-  'correction.list', 'correction.approve', 'correction.reject', 'roster.import', 'roster.update', 'roster.list', 'signup.list', 'signup.review',
+  'correction.list', 'correction.approve', 'correction.reject', 'roster.import', 'roster.update', 'roster.list', 'signup.list', 'signup.review', 'signup.joinCode',
   'role.set', 'scanner.assign', 'code.reissue', 'schedule.import', 'schedule.update',
   'period.close', 'period.reopen', 'export.summary', 'dashboard.get', 'rebuild.fromLog',
 ];

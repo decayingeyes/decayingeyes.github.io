@@ -22,6 +22,7 @@ var HHConfigDefaults = (function () {
     { key: 'LOGIN_LOCK_MINUTES', value: 10, type: 'int', description: 'ล็อกการเข้าสู่ระบบกี่นาที' },
     { key: 'PASSWORD_MIN_LENGTH', value: 8, type: 'int', description: 'รหัสผ่านอย่างน้อยกี่ตัวอักษร' },
     { key: 'PASSWORD_HASH_ROUNDS', value: 1000, type: 'int', description: 'จำนวนรอบการแฮชรหัสผ่าน (อย่าลดลง)' },
+    { key: 'SIGNUP_JOIN_CODE', value: '', type: 'string', description: 'รหัสกลางเข้าร่วมงาน: ใส่ตอนสมัครแล้วเข้าใช้ได้ทันที (เว้นว่าง = ต้องรอแอดมินอนุมัติทุกคน) — เปลี่ยนได้ที่หน้าแอดมิน' },
   ];
 
   function coerce(raw, type, fallback) {

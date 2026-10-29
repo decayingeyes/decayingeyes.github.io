@@ -40,6 +40,7 @@ function handlers_() {
     'photo.set': handlePhotoSet_,
     'signup.list': handleSignupList_,
     'signup.review': handleSignupReview_,
+    'signup.joinCode': handleSignupJoinCode_,
   };
 }
 

@@ -100,6 +100,14 @@ function handleAuthSignup_(payload, ctx) {
   var problem = HHAuth.signupProblem(f, cfg.PASSWORD_MIN_LENGTH);
   if (problem) throw new HHErrors.AppError('VALIDATION', problem);
   HHRateLimit.assertNotLocked('signup', f.studentId);
+  // Shared join code: correct -> active at once; wrong -> refused (rate-limited
+  // across all ids so it cannot be guessed); empty -> waits for an admin.
+  var join = HHAuth.joinCodeResult(payload.joinCode, cfg.SIGNUP_JOIN_CODE);
+  if (join === 'wrong') {
+    HHRateLimit.assertNotLocked('joincode', 'all');
+    HHRateLimit.recordFailure('joincode', 'all');
+    throw new HHErrors.AppError('VALIDATION', 'รหัสเข้าร่วมงานไม่ถูกต้อง (ไม่มีรหัสก็เว้นว่างไว้ แล้วรอแอดมินอนุมัติ)');
+  }
 
   return HHLock.withLock(function () {
     var units = HHSheets.readAll('Units');
@@ -131,7 +139,7 @@ function handleAuthSignup_(payload, ctx) {
     var account = {
       PasswordHash: HHAuth.hashPassword(f.password, salt, HHAccounts.pepper(), cfg.PASSWORD_HASH_ROUNDS, HHCrypto.sha256Hex),
       Salt: salt, ActivationCodeHash: '', ActivatedAt: new Date(), CodeVersion: 1,
-      Status: 'PENDING', CurrentState: 'OUT', OpenSessionID: '',
+      Status: join === 'match' ? 'ACTIVE' : 'PENDING', CurrentState: 'OUT', OpenSessionID: '',
     };
     if (verdict.overwrite) {
       var upd = Object.assign({}, fields, account);
@@ -142,7 +150,10 @@ function handleAuthSignup_(payload, ctx) {
     }
     HHOrg.clearCache();
     HHLog.append({ requestId: ctx.requestId, unitId: unit.UnitID, studentId: f.studentId, action: 'SIGNUP',
-      actorId: f.studentId, method: 'SELF', note: f.nickname });
-    return { studentId: f.studentId, status: 'PENDING' };
+      actorId: f.studentId, method: 'SELF', flags: join === 'match' ? ['JOIN_CODE'] : [], note: f.nickname });
+    if (join !== 'match') return { studentId: f.studentId, status: 'PENDING' };
+    // Joined with the shared code: log straight in.
+    var member = HHRepo.findBy('Members', 'StudentID', f.studentId).data;
+    return { studentId: f.studentId, status: 'ACTIVE', token: HHSessions.create(member, payload.userAgent), profile: profileOf_(member) };
   });
 }

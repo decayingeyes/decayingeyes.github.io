@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>🎃 สมัครสมาชิก</h1>
-    <p class="muted">กรอกข้อมูลตามจริง แล้วรอแอดมินอนุมัติ — อนุมัติแล้วเข้าสู่ระบบด้วยรหัสนักศึกษาและรหัสผ่านที่ตั้งไว้ได้เลย</p>
+    <p class="muted">กรอกข้อมูลตามจริง · มี<b>รหัสเข้าร่วมงาน</b>จากหัวหน้า = เข้าใช้ได้ทันที · ไม่มี = เว้นว่างไว้แล้วรอแอดมินอนุมัติ</p>
 
     <form id="form" autocomplete="on">
       <label for="sid">รหัสนักศึกษา</label>
@@ -24,6 +24,8 @@
       </div>
       <label for="nick">ชื่อเล่น</label>
       <input id="nick" autocomplete="nickname" maxlength="60" required>
+      <label for="join">รหัสเข้าร่วมงาน (ถ้ามี)</label>
+      <input id="join" autocapitalize="characters" autocomplete="off" maxlength="12" placeholder="เช่น K7MPQ2 — ไม่มีก็เว้นว่างได้">
       <label for="pw">ตั้งรหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label>
       <input id="pw" type="password" autocomplete="new-password" minlength="8" required>
       <label for="pw2">ยืนยันรหัสผ่านอีกครั้ง</label>
@@ -47,6 +49,9 @@
   <script>
     (function () {
       var $ = function (id) { return document.getElementById(id); };
+      // A shared signup link may carry the join code: …/register.html?join=K7MPQ2
+      var joinFromLink = new URLSearchParams(location.search).get('join');
+      if (joinFromLink) $('join').value = joinFromLink;
       $('form').addEventListener('submit', function (e) {
         e.preventDefault();
         if ($('pw').value !== $('pw2').value) { HH.say($('msg'), 'รหัสผ่านสองช่องไม่ตรงกัน', 'bad'); return; }
@@ -54,10 +59,17 @@
         HH.say($('msg'), '');
         HH.call('auth.signup', {
           studentId: $('sid').value, firstName: $('fn').value, lastName: $('ln').value,
-          nickname: $('nick').value, password: $('pw').value,
+          nickname: $('nick').value, password: $('pw').value, joinCode: $('join').value,
+          userAgent: navigator.userAgent,
         }).then(function (res) {
           HH.busy($('submit'), false);
           if (!res.ok) { HH.say($('msg'), HH.errorText(res), 'bad'); return; }
+          if (res.data.status === 'ACTIVE' && res.data.token) {
+            // Joined with the shared code: already logged in.
+            HH.token.set(res.data.token);
+            window.location.replace('portal.html');
+            return;
+          }
           $('done-sid').textContent = 'รหัส ' + res.data.studentId;
           $('form').hidden = true;
           $('done').hidden = false;

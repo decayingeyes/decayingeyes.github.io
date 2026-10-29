@@ -114,3 +114,20 @@ function handleSignupReview_(payload, ctx) {
     return { studentId: String(row.data.StudentID), status: approve ? 'ACTIVE' : 'REJECTED' };
   });
 }
+
+/** payload: { regenerate?: boolean } — show (and optionally replace) the shared join code. */
+function handleSignupJoinCode_(payload, ctx) {
+  return HHLock.withLock(function () {
+    HHConfig.ensureDefaults(); // older sheets may not have the row yet
+    var row = HHRepo.findBy('Config', 'Key', 'SIGNUP_JOIN_CODE');
+    var code = row ? String(row.data.Value || '') : '';
+    if (payload.regenerate === true || !code) {
+      code = HHAuth.newActivationCode(HHCrypto.randInt);
+      HHRepo.update('Config', row.row, { Value: code });
+      HHConfig.clearCache();
+      HHLog.append({ requestId: ctx.requestId, unitId: ctx.actor.unitId, action: 'JOIN_CODE', actorId: ctx.actor.studentId,
+        method: 'ADMIN', note: 'join code regenerated' });
+    }
+    return { joinCode: code };
+  });
+}

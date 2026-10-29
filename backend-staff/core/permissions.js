@@ -65,6 +65,7 @@ var HHPermissions = (function () {
     'roster.list': { minRole: 'unit_admin', scope: 'unit' },
     'signup.list': { minRole: 'unit_admin', scope: 'unit' },
     'signup.review': { minRole: 'unit_admin', scope: 'unit' },
+    'signup.joinCode': { minRole: 'unit_admin', scope: 'unit' },
     'role.set': { minRole: 'unit_admin', scope: 'unit' },
     'scanner.assign': { minRole: 'unit_admin', scope: 'unit' },
     'code.reissue': { minRole: 'unit_admin', scope: 'unit' },

@@ -267,3 +267,5 @@ body.has-nav .flash { bottom: calc(80px + env(safe-area-inset-bottom)); }
 .done { text-align: center; }
 .done-icon { font-size: 3rem; }
 .signup-card { border-left: 5px solid var(--accent); }
+.join-box { border-left: 5px solid var(--accent); }
+.small-code { font-size: 1.5rem; }

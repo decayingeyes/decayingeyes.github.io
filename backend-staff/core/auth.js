@@ -170,7 +170,20 @@ var HHAuth = (function () {
     return { ok: false, overwrite: false, messageTh: 'รหัสนี้มีบัญชีอยู่แล้ว ให้เข้าสู่ระบบ หรือขอรหัสเปิดใช้งานใหม่จากหัวหน้า' };
   }
 
+  /**
+   * Shared join code (decision 2026-10-30): typed at sign-up, a correct code
+   * activates the account at once as a plain member. Case/space-insensitive.
+   * @return {'none'|'match'|'wrong'}
+   */
+  function joinCodeResult(given, configured) {
+    var g = normalizeActivationCode(given);
+    if (!g) return 'none';
+    var c = normalizeActivationCode(configured);
+    return c && safeEqual(g, c) ? 'match' : 'wrong';
+  }
+
   return {
+    joinCodeResult: joinCodeResult,
     signupProblem: signupProblem,
     signupAgainst: signupAgainst,
     MAX_PHOTO_CHARS: MAX_PHOTO_CHARS,

@@ -172,3 +172,11 @@ test('self sign-up: form validation and existing-account rules', () => {
   assert.equal(A.signupAgainst({ Status: 'ACTIVE' }).ok, false);
   assert.equal(A.signupAgainst({ Status: 'DISABLED' }).ok, false);
 });
+
+test('shared join code: empty / match (case, spaces, dashes ignored) / wrong / not configured', () => {
+  assert.equal(A.joinCodeResult('', 'DE7K2Q'), 'none');
+  assert.equal(A.joinCodeResult('  ', 'DE7K2Q'), 'none');
+  assert.equal(A.joinCodeResult('de7-k2q', 'DE7K2Q'), 'match');
+  assert.equal(A.joinCodeResult('DE7K2X', 'DE7K2Q'), 'wrong');
+  assert.equal(A.joinCodeResult('ANYTHING', ''), 'wrong'); // no code set: nothing matches
+});

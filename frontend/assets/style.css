@@ -155,3 +155,22 @@ form .btn { margin-top: 20px; }
   border: 3px solid var(--accent); border-radius: 10px; box-shadow: 0 0 0 999px rgba(0,0,0,0.25); pointer-events: none; }
 .member-card .barcode-area .qr { width: min(62%, 260px); margin: 14px auto 0; }
 .member-card .barcode-area .qr svg { width: 100%; height: auto; display: block; }
+
+/* team status */
+main.wide { max-width: 760px; }
+.counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.count { background: var(--surface); border-radius: var(--radius); padding: 12px; text-align: center; }
+.count b { display: block; font-size: 2rem; line-height: 1.1; }
+.count span { font-size: 0.85rem; color: var(--muted); }
+.count.in b { color: var(--ok); }
+.count.left b { color: #5aa2ff; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+.chip { border: 1px solid #33333d; background: transparent; color: var(--text); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 0.9rem; cursor: pointer; }
+.chip.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.member-row { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin: 8px 0; border-left: 5px solid #555; }
+.member-row.in { border-left-color: var(--ok); }
+.member-row.left { border-left-color: #5aa2ff; }
+.mr-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mr-nick { font-size: 1.15rem; font-weight: 700; }
+.mr-hours { font-weight: 700; color: var(--accent); white-space: nowrap; }
+.mr-session { font-size: 0.92rem; margin-top: 4px; }

@@ -17,6 +17,7 @@ function handlers_() {
     'me.card': handleMeCard_,
     'scan.lookup': handleScanLookup_,
     'scan.confirm': handleScanConfirm_,
+    'team.status': handleTeamStatus_,
     'team.activationCode.issue': handleTeamActivationCodeIssue_,
     'roster.import': handleRosterImport_,
   };

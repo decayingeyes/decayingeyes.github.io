@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>สถานะทีมวันนี้ — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main class="wide">
+    <div class="scan-top">
+      <h1>👥 สถานะทีมวันนี้</h1>
+      <a href="portal.html" class="muted">กลับ</a>
+    </div>
+    <p class="muted" id="meta">กำลังโหลด…</p>
+
+    <div class="counts" id="counts" hidden>
+      <div class="count in"><b id="n-in">0</b><span>🟢 อยู่ในงาน</span></div>
+      <div class="count left"><b id="n-left">0</b><span>🔵 กลับแล้ว</span></div>
+      <div class="count not"><b id="n-not">0</b><span>⚪ ยังไม่มา</span></div>
+    </div>
+
+    <div class="filters" id="filters"></div>
+    <div id="list"></div>
+    <a class="btn" href="scan.html" style="margin-top:16px">📷 ไปหน้าสแกน</a>
+  </main>
+
+  <script>
+    (function () {
+      if (!HH.requireLogin()) return;
+      var $ = function (id) { return document.getElementById(id); };
+      var teamFilter = '';
+      var last = null;
+      var STATE = {
+        IN: { icon: '🟢', text: 'อยู่ในงาน', cls: 'in' },
+        LEFT: { icon: '🔵', text: 'กลับแล้ว', cls: 'left' },
+        NOT_HERE: { icon: '⚪', text: 'ยังไม่มา', cls: 'not' },
+      };
+
+      function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+
+      function hoursText(h) { return (Math.round(h * 100) / 100) + ' ชม.'; }
+
+      function render(d) {
+        last = d;
+        $('meta').textContent = 'วันทำงาน ' + d.workDate + ' · อัปเดตล่าสุด ' + d.serverTime + ' น. · รีเฟรชเองทุก 10 วินาที';
+        $('counts').hidden = false;
+        var rows = d.members.filter(function (m) { return !teamFilter || m.teamId === teamFilter; });
+        $('n-in').textContent = rows.filter(function (m) { return m.state === 'IN'; }).length;
+        $('n-left').textContent = rows.filter(function (m) { return m.state === 'LEFT'; }).length;
+        $('n-not').textContent = rows.filter(function (m) { return m.state === 'NOT_HERE'; }).length;
+
+        var f = $('filters');
+        if (!f.dataset.built && d.teams.length > 1) {
+          f.dataset.built = '1';
+          [{ teamId: '', name: 'ทุกทีม' }].concat(d.teams).forEach(function (t) {
+            var b = el('button', 'chip' + (t.teamId === teamFilter ? ' on' : ''), t.name);
+            b.addEventListener('click', function () {
+              teamFilter = t.teamId;
+              Array.prototype.forEach.call(f.children, function (c) { c.classList.remove('on'); });
+              b.classList.add('on');
+              render(last);
+            });
+            f.appendChild(b);
+          });
+        }
+
+        var list = $('list');
+        list.innerHTML = '';
+        rows.forEach(function (m) {
+          var s = STATE[m.state];
+          var row = el('div', 'member-row ' + s.cls);
+          var head = el('div', 'mr-head');
+          head.appendChild(el('span', 'mr-nick', s.icon + ' ' + m.nickname));
+          head.appendChild(el('span', 'mr-hours', m.sessions.length ? hoursText(m.hoursToday) : ''));
+          row.appendChild(head);
+          row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.teamName));
+          m.sessions.forEach(function (x) {
+            var line = 'เข้า ' + x.in + (x.scannedInBy ? ' (โดย ' + x.scannedInBy + ')' : '');
+            line += x.out
+              ? ' → ออก ' + x.out + (x.scannedOutBy ? ' (โดย ' + x.scannedOutBy + ')' : '') + ' · อยู่ ' + x.rawMinutes + ' นาที นับ ' + hoursText(x.countedHours)
+              : ' → ยังอยู่ในงาน';
+            row.appendChild(el('div', 'mr-session', line));
+          });
+          list.appendChild(row);
+        });
+        if (rows.length === 0) list.appendChild(el('p', 'muted', 'ไม่มีสมาชิกในทีมที่ดูได้'));
+      }
+
+      function load() {
+        HH.call('team.status').then(function (res) {
+          if (!res.ok) {
+            if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return; }
+            HH.say($('meta'), HH.errorText(res), 'bad');
+            return;
+          }
+          render(res.data);
+        });
+      }
+
+      load();
+      setInterval(function () { if (!document.hidden) load(); }, 10000);
+    })();
+  </script>
+</body>
+</html>

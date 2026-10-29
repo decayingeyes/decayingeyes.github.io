@@ -32,7 +32,8 @@
       </div>
       <button class="btn" id="start">เริ่มสแกน</button>
     </div>
-    <p class="muted small" id="cam-hint" hidden>ให้บาร์โค้ดอยู่ในแนวนอนเต็มกรอบ ห่างประมาณ 15–25 ซม. · ถ้าส่องจอ ให้เปิดความสว่างจอสูงสุด</p>
+    <p class="muted small" id="cam-hint" hidden>ส่อง <b>QR code</b> บนบัตรจะอ่านง่ายที่สุด · ห่างประมาณ 15–25 ซม. · ถ้าส่องจอ ให้เปิดความสว่างจอสูงสุด</p>
+    <p class="muted small" id="cam-status"></p>
 
     <!-- result -->
     <div id="result" class="card result" hidden>
@@ -125,7 +126,8 @@
       function startCamera() {
         $('start').hidden = true;
         var hints = new Map();
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128]);
+        // Cards carry the same payload as Code 128 (official) and QR (reads far better off screens).
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128]);
         hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
         scanner = new ZXing.BrowserMultiFormatReader(hints, 150);
         var constraints = {
@@ -139,13 +141,23 @@
         };
         $('viewfinder').hidden = false;
         $('cam-hint').hidden = false;
+        var frames = 0;
         scanner.decodeFromConstraints(constraints, $('video'), function (result) {
+          frames++;
+          if (frames % 5 === 0) showCamStatus(frames);
           if (result) onDecoded(result.getText());
-        }).catch(function () {
+        }).catch(function (e) {
+          $('cam-status').textContent = 'กล้องเปิดไม่ได้: ' + (e && e.name ? e.name : e);
           $('viewfinder').hidden = true;
           $('start').hidden = false;
           flash('เปิดกล้องไม่ได้ — กดอนุญาตการใช้กล้อง หรือใช้ช่องพิมพ์รหัสด้านล่าง', 'bad', 4000);
         });
+      }
+
+      // Diagnostics: real camera resolution and how many frames were tried.
+      function showCamStatus(frames) {
+        var v = $('video');
+        $('cam-status').textContent = 'กล้อง ' + v.videoWidth + '×' + v.videoHeight + ' · ตรวจแล้ว ' + frames + ' ภาพ';
       }
 
       function pauseCamera() { paused = true; }

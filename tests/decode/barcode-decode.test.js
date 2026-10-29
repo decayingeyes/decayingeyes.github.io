@@ -52,3 +52,33 @@ test('decoded text round-trips through barcode.parse', () => {
   const payload = B.payload('9900004', 1, 'secret', hmacBytes);
   assert.deepEqual(B.parse(decode(bars(payload), 2)), { studentId: '9900004', check: payload.slice(-4) });
 });
+
+const qrcode = require('qrcode-generator');
+
+function decodeQr(text, cell = 4) {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  const size = (n + 8) * cell;
+  const lum = new Uint8ClampedArray(size * size).fill(255);
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (!qr.isDark(r, c)) continue;
+      for (let y = 0; y < cell; y++) {
+        for (let x = 0; x < cell; x++) lum[((r + 4) * cell + y) * size + (c + 4) * cell + x] = 0;
+      }
+    }
+  }
+  const hints = new Map([[ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128]]]);
+  const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.RGBLuminanceSource(lum, size, size)));
+  return new ZXing.MultiFormatReader().decode(bitmap, hints).getText();
+}
+
+test('card QR codes decode to the same payload as the Code 128 barcode', () => {
+  for (const id of ['9900004', '6512345678', '0650001']) {
+    const payload = B.payload(id, 1, 'secret', hmacBytes);
+    assert.equal(decodeQr(payload), payload);
+    assert.deepEqual(B.parse(decodeQr(payload)), B.parse(payload));
+  }
+});

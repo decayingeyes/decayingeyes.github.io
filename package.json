@@ -17,6 +17,7 @@
   "devDependencies": {
     "@google/clasp": "^3.4.1",
     "@zxing/library": "^0.21.3",
-    "jsbarcode": "^3.11.6"
+    "jsbarcode": "^3.11.6",
+    "qrcode-generator": "^1.4.4"
   }
 }

@@ -151,5 +151,7 @@ form .btn { margin-top: 20px; }
 .small { font-size: 0.85rem; }
 .viewfinder { position: relative; }
 .viewfinder video { width: 100%; display: block; }
-.viewfinder .aim { position: absolute; left: 6%; right: 6%; top: 32%; bottom: 32%;
+.viewfinder .aim { position: absolute; left: 6%; right: 6%; top: 18%; bottom: 18%;
   border: 3px solid var(--accent); border-radius: 10px; box-shadow: 0 0 0 999px rgba(0,0,0,0.25); pointer-events: none; }
+.member-card .barcode-area .qr { width: min(62%, 260px); margin: 14px auto 0; }
+.member-card .barcode-area .qr svg { width: 100%; height: auto; display: block; }

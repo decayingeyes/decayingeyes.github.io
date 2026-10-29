@@ -14,6 +14,7 @@ function onOpen() {
     .addItem('นำเข้ารายชื่อจากชีต RosterImport', 'menuImportRoster')
     .addItem('ออกรหัสเปิดใช้งาน (รายคน)', 'menuIssueCode')
     .addItem('สร้างข้อมูลตัวอย่าง (เฉพาะ TEST)', 'menuSeedTest')
+    .addItem('ทดลองปิดรายการลืมสแกนออก (เฉพาะ TEST)', 'menuTestAutoClose')
     .addSeparator()
     .addItem('ตรวจสอบโครงสร้างชีต', 'menuValidateSchema')
     .addItem('ดูสถานะระบบ', 'menuShowStatus')
@@ -117,13 +118,27 @@ function setupAs_(env) {
 
 /** (Re)create time-driven triggers; safe to run repeatedly. */
 function installTriggers_() {
-  var wanted = { summaryTick: function (b) { return b.everyMinutes(1); } };
+  var wanted = {
+    summaryTick: function (b) { return b.everyMinutes(1); },
+    autoCloseTick: function (b) { return b.everyHours(1); },
+  };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
   });
   Object.keys(wanted).forEach(function (fn) {
     wanted[fn](ScriptApp.newTrigger(fn).timeBased()).create();
   });
+}
+
+/** TEST only: run auto-close as if it were tomorrow 05:00, closing every open session now. */
+function menuTestAutoClose() {
+  var ui = SpreadsheetApp.getUi();
+  if (!HHProps.isTest()) { ui.alert('ใช้ได้เฉพาะโหมดทดสอบ (TEST) เท่านั้น'); return; }
+  var answer = ui.alert('จำลองว่าเลยตี 5 ของวันพรุ่งนี้แล้ว: ทุกคนที่ยังไม่สแกนออกจะถูกปิดเป็น "รอตรวจสอบ" นับ 0 ชม. ทำต่อไหม?', ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+  var n = HHAutoClose.run(new Date(Date.now() + 36 * 3600 * 1000));
+  HHSummarySheets.refresh();
+  ui.alert('ปิดอัตโนมัติแล้ว ' + n + ' รายการ (ดูได้ในแท็บ Alerts และหน้าสถานะทีม)');
 }
 
 function menuRefreshSummary() {

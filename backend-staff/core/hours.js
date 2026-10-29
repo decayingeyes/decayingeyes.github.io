@@ -59,7 +59,17 @@ var HHHours = (function () {
     };
   }
 
+  /**
+   * When an OPEN session of `workDate` is auto-closed (spec 5.9): the next
+   * calendar day at AUTO_CLOSE_HOUR, Bangkok time.
+   */
+  function autoCloseAt(workDate, autoCloseHour) {
+    var p = String(workDate).split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2] + 1, autoCloseHour) - BANGKOK_OFFSET_MS);
+  }
+
   return {
+    autoCloseAt: autoCloseAt,
     bangkokDate: bangkokDate,
     bangkokTime: bangkokTime,
     workDate: workDate,

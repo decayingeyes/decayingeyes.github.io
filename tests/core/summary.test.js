@@ -36,3 +36,12 @@ test('matrix: one column per date, totals, open session', () => {
   const row1 = mx.rows.find((r) => r[2] === '1');
   assert.deepEqual(row1.slice(4), ['', '13:05– (ยังอยู่)', '', 0, 1]);
 });
+
+test('auto-closed sessions read as forgotten checkout, not still inside', () => {
+  const closed = [{ StudentID: '3', WorkDate: '2026-10-31', In: bkk('2026-10-31T13:00:00'), Status: 'NEEDS_REVIEW', CountedHours: 0 }];
+  const t = S.today(members, closed, org, '2026-10-31', H.bangkokTime);
+  const row = t.rows.find((r) => r[3] === '3');
+  assert.equal(row[7], 'ลืมสแกนออก');
+  const mx = S.matrix(members, closed, org, ['2026-10-31'], H.bangkokTime);
+  assert.equal(mx.rows.find((r) => r[2] === '3')[4], '13:00– ลืมสแกนออก (0 ชม.)');
+});

@@ -20,6 +20,10 @@
       <a class="btn" href="scan.html">📷 สแกนเข้า-ออกงานให้สมาชิก</a>
       <a class="btn secondary" href="team.html">👥 สถานะทีมวันนี้</a>
     </div>
+    <div class="card today no-print" id="today" hidden>
+      <div class="muted small">วันนี้ (<span id="today-date"></span>)</div>
+      <div class="today-text" id="today-text"></div>
+    </div>
     <p class="msg" id="msg">กำลังโหลดบัตร…</p>
 
     <div class="member-card" id="card" hidden>
@@ -35,8 +39,28 @@
     <div class="stack no-print" id="actions" hidden style="margin-top:16px">
       <button class="btn" id="save">บันทึกบัตรเป็นรูป</button>
       <button class="btn secondary" id="print">พิมพ์บัตร</button>
-      <button class="btn secondary" id="logout">ออกจากระบบ</button>
     </div>
+
+    <section class="no-print" id="history-box" hidden>
+      <h2>ชั่วโมงของฉัน</h2>
+      <div class="card total"><span>รวมทั้งหมด</span><b id="total"></b></div>
+      <div id="history"></div>
+    </section>
+
+    <section class="no-print" id="report-box" hidden>
+      <h2>แจ้งปัญหา</h2>
+      <form id="report-form" class="card">
+        <label for="r-date">วันที่</label>
+        <input id="r-date" type="date" required>
+        <label for="r-msg">เกิดอะไรขึ้น</label>
+        <input id="r-msg" maxlength="500" placeholder="เช่น ลืมสแกนออก ออกจริงประมาณ 20:00" required>
+        <button class="btn secondary" type="submit" id="r-send">ส่งเรื่องให้หัวหน้า</button>
+        <p class="msg" id="r-msg-out"></p>
+      </form>
+      <div id="my-reports"></div>
+    </section>
+
+    <button class="btn secondary no-print" id="logout" style="margin-top:24px">ออกจากระบบ</button>
   </main>
 
   <div class="overlay no-print" id="overlay">
@@ -65,6 +89,90 @@
         document.getElementById('card').hidden = false;
         document.getElementById('actions').hidden = false;
       });
+
+      // ---- today / history / reports (member portal, spec 5.6) ----
+      var $ = function (id) { return document.getElementById(id); };
+      function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+      var KIND_CLS = { NOT_IN: 'muted', IN: 'ok', OUT: 'out', NEEDS_REVIEW: 'warn' };
+
+      function loadToday() {
+        HH.call('me.today').then(function (res) {
+          if (!res.ok) return;
+          $('today').hidden = false;
+          $('today-date').textContent = res.data.workDate;
+          $('today-text').textContent = res.data.text;
+          $('today-text').className = 'today-text ' + KIND_CLS[res.data.kind];
+          if (!$('r-date').value) $('r-date').value = res.data.workDate;
+        });
+      }
+
+      function loadHistory() {
+        HH.call('me.history').then(function (res) {
+          if (!res.ok) return;
+          var h = res.data;
+          $('history-box').hidden = false;
+          $('total').textContent = h.totalHours + ' ชม.' + (h.points !== null ? ' · ' + h.points + ' แต้ม' : '');
+          var box = $('history');
+          box.innerHTML = '';
+          if (h.days.length === 0) box.appendChild(el('p', 'muted', 'ยังไม่มีประวัติการเข้างาน'));
+          h.days.forEach(function (d) {
+            var c = el('div', 'card day');
+            var head = el('div', 'mr-head');
+            head.appendChild(el('b', '', d.workDate));
+            head.appendChild(el('span', 'mr-hours', d.countedHours + ' ชม.'));
+            c.appendChild(head);
+            d.sessions.forEach(function (s) {
+              var line = 'เข้า ' + s.in + ' → ' + (s.out ? 'ออก ' + s.out + ' · อยู่ ' + s.rawMinutes + ' นาที' : '…');
+              line += s.countedHours !== null ? ' · นับ ' + s.countedHours + ' ชม.' : '';
+              var row = el('div', 'mr-session', line + ' ');
+              row.appendChild(el('span', 'badge ' + s.status.toLowerCase(), s.statusTh));
+              c.appendChild(row);
+            });
+            box.appendChild(c);
+          });
+        });
+      }
+
+      function loadReports() {
+        HH.call('me.reports').then(function (res) {
+          if (!res.ok) return;
+          $('report-box').hidden = false;
+          var box = $('my-reports');
+          box.innerHTML = '';
+          res.data.forEach(function (r) {
+            var c = el('div', 'card');
+            var head = el('div', 'mr-head');
+            head.appendChild(el('b', '', r.workDate));
+            head.appendChild(el('span', 'badge ' + r.status.toLowerCase(), r.statusTh));
+            c.appendChild(head);
+            c.appendChild(el('div', '', r.message));
+            if (r.resolvedNote) c.appendChild(el('div', 'muted small', 'หัวหน้า: ' + r.resolvedNote));
+            box.appendChild(c);
+          });
+        });
+      }
+
+      $('report-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        HH.busy($('r-send'), true, 'กำลังส่ง…');
+        HH.call('me.report.create', { workDate: $('r-date').value, message: $('r-msg').value }).then(function (res) {
+          HH.busy($('r-send'), false);
+          if (!res.ok) { HH.say($('r-msg-out'), HH.errorText(res), 'bad'); return; }
+          HH.say($('r-msg-out'), 'ส่งเรื่องแล้ว หัวหน้าจะตรวจสอบให้', 'ok');
+          $('r-msg').value = '';
+          loadReports();
+        });
+      });
+
+      loadToday();
+      loadHistory();
+      loadReports();
+      setInterval(function () { if (!document.hidden) loadToday(); }, 20000);
 
       document.getElementById('save').addEventListener('click', function () {
         HHCard.toPng(card).then(function (url) {

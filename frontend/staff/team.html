@@ -24,6 +24,13 @@
       <div class="count not"><b id="n-not">0</b><span>⚪ ยังไม่มา</span></div>
     </div>
 
+    <section id="inbox" hidden>
+      <h2>🔔 ต้องจัดการ</h2>
+      <div id="alerts"></div>
+      <div id="reports"></div>
+    </section>
+
+    <h2>สมาชิก</h2>
     <div class="filters" id="filters"></div>
     <div id="list"></div>
     <a class="btn" href="scan.html" style="margin-top:16px">📷 ไปหน้าสแกน</a>
@@ -78,15 +85,17 @@
         list.innerHTML = '';
         rows.forEach(function (m) {
           var s = STATE[m.state];
-          var row = el('div', 'member-row ' + s.cls);
+          var row = el('div', 'member-row ' + s.cls + (m.overdue ? ' overdue' : ''));
           var head = el('div', 'mr-head');
-          head.appendChild(el('span', 'mr-nick', s.icon + ' ' + m.nickname));
+          head.appendChild(el('span', 'mr-nick', s.icon + ' ' + m.nickname + (m.overdue ? ' ⏰ อยู่นานเกินกำหนด' : '')));
           head.appendChild(el('span', 'mr-hours', m.sessions.length ? hoursText(m.hoursToday) : ''));
           row.appendChild(head);
           row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.teamName));
           m.sessions.forEach(function (x) {
             var line = 'เข้า ' + x.in + (x.scannedInBy ? ' (โดย ' + x.scannedInBy + ')' : '');
-            line += x.out
+            line += x.status === 'NEEDS_REVIEW'
+              ? ' → ⚠️ ลืมสแกนออก (นับ 0 ชม. รอแก้ไข)'
+              : x.out
               ? ' → ออก ' + x.out + (x.scannedOutBy ? ' (โดย ' + x.scannedOutBy + ')' : '') + ' · อยู่ ' + x.rawMinutes + ' นาที นับ ' + hoursText(x.countedHours)
               : ' → ยังอยู่ในงาน';
             row.appendChild(el('div', 'mr-session', line));
@@ -107,8 +116,55 @@
         });
       }
 
+      // ---- inbox: auto-close alerts and member reports ----
+      function loadInbox() {
+        HH.call('team.reports').then(function (res) {
+          if (!res.ok) return; // deputies cannot read reports (head+), just hide the box
+          var d = res.data;
+          $('inbox').hidden = d.alerts.length === 0 && d.reports.length === 0;
+          var a = $('alerts');
+          a.innerHTML = '';
+          d.alerts.forEach(function (x) {
+            var c = el('div', 'card alert-row');
+            c.appendChild(el('b', '', '⚠️ ' + x.nickname + ' (' + x.studentId + ')'));
+            c.appendChild(el('div', '', x.detail));
+            a.appendChild(c);
+          });
+          var r = $('reports');
+          r.innerHTML = '';
+          d.reports.forEach(function (x) {
+            var c = el('div', 'card');
+            c.appendChild(el('b', '', '📝 ' + x.nickname + ' · ' + x.workDate));
+            c.appendChild(el('div', '', x.message));
+            var f = el('form', 'resolve');
+            var input = el('input');
+            input.placeholder = 'บันทึกการตรวจสอบ';
+            input.maxLength = 300;
+            var btn = el('button', 'btn secondary', 'ตรวจแล้ว');
+            btn.type = 'submit';
+            var out = el('p', 'msg');
+            f.appendChild(input);
+            f.appendChild(btn);
+            f.addEventListener('submit', function (e) {
+              e.preventDefault();
+              HH.busy(btn, true, '…');
+              HH.call('team.report.resolve', { reportId: x.reportId, note: input.value }).then(function (res2) {
+                HH.busy(btn, false);
+                if (!res2.ok) { HH.say(out, HH.errorText(res2), 'bad'); return; }
+                loadInbox();
+              });
+            });
+            c.appendChild(f);
+            c.appendChild(out);
+            r.appendChild(c);
+          });
+        });
+      }
+
       load();
+      loadInbox();
       setInterval(function () { if (!document.hidden) load(); }, 10000);
+      setInterval(function () { if (!document.hidden) loadInbox(); }, 30000);
     })();
   </script>
 </body>

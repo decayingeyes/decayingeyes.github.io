@@ -32,7 +32,7 @@ var HHSummary = (function () {
       return [
         STATE_TH[r.state], r.nickname, r.fullName, r.studentId, deptOf[r.studentId], org.teams[r.teamId] || '',
         r.sessions.map(function (s) { return s.in; }).join(', '),
-        r.sessions.map(function (s) { return s.out || '(ยังอยู่)'; }).join(', '),
+        r.sessions.map(function (s) { return s.status === 'NEEDS_REVIEW' ? 'ลืมสแกนออก' : (s.out || '(ยังอยู่)'); }).join(', '),
         r.sessions.length ? num(r.hoursToday) : '',
         scanners.join(', '),
       ];
@@ -68,6 +68,7 @@ var HHSummary = (function () {
           if (list.length === 0) return '';
           days++;
           return list.map(function (s) {
+            if (s.Status === 'NEEDS_REVIEW') return fmtTime(new Date(s.In)) + '– ลืมสแกนออก (0 ชม.)';
             if (!s.Out) return fmtTime(new Date(s.In)) + '– (ยังอยู่)';
             var h = Number(s.CountedHours) || 0;
             total += h;

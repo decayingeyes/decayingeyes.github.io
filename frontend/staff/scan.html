@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="../assets/scanner.js"></script>
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>
 </head>
@@ -117,7 +119,7 @@
         flash.t = setTimeout(function () { f.hidden = true; }, ms || 1800);
       }
 
-      // ---- camera: ZXing on the full frame, high resolution, Code 128 only ----
+      // ---- camera: assets/scanner.js (centre crop; jsQR for QR, ZXing for Code 128) ----
       // Results are ignored while a lookup/result is open ("paused"); the camera keeps running.
       var paused = false;
       var lastText = '';
@@ -125,39 +127,20 @@
 
       function startCamera() {
         $('start').hidden = true;
-        var hints = new Map();
-        // Cards carry the same payload as Code 128 (official) and QR (reads far better off screens).
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128]);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        scanner = new ZXing.BrowserMultiFormatReader(hints, 150);
-        var constraints = {
-          audio: false,
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            advanced: [{ focusMode: 'continuous' }],
-          },
-        };
         $('viewfinder').hidden = false;
         $('cam-hint').hidden = false;
-        var frames = 0;
-        scanner.decodeFromConstraints(constraints, $('video'), function (result) {
-          frames++;
-          if (frames % 5 === 0) showCamStatus(frames);
-          if (result) onDecoded(result.getText());
-        }).catch(function (e) {
+        scanner = new HHScanner($('video'), onDecoded, function (s) {
+          // Diagnostics: real camera resolution and how many frames were tried.
+          $('cam-status').textContent = s.error
+            ? 'ข้อผิดพลาดตัวอ่าน: ' + s.error
+            : 'กล้อง ' + s.width + '×' + s.height + ' · ตรวจแล้ว ' + s.frames + ' ภาพ';
+        });
+        scanner.start().catch(function (e) {
           $('cam-status').textContent = 'กล้องเปิดไม่ได้: ' + (e && e.name ? e.name : e);
           $('viewfinder').hidden = true;
           $('start').hidden = false;
           flash('เปิดกล้องไม่ได้ — กดอนุญาตการใช้กล้อง หรือใช้ช่องพิมพ์รหัสด้านล่าง', 'bad', 4000);
         });
-      }
-
-      // Diagnostics: real camera resolution and how many frames were tried.
-      function showCamStatus(frames) {
-        var v = $('video');
-        $('cam-status').textContent = 'กล้อง ' + v.videoWidth + '×' + v.videoHeight + ' · ตรวจแล้ว ' + frames + ' ภาพ';
       }
 
       function pauseCamera() { paused = true; }

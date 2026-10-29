@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="assets/style.css">
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="assets/scanner.js"></script>
 </head>
 <body>
   <main>
@@ -39,23 +41,17 @@
       document.getElementById('start').addEventListener('click', function () {
         this.hidden = true;
         log('requesting camera…');
-        var hints = new Map();
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128]);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        var reader = new ZXing.BrowserMultiFormatReader(hints, 150);
-        var frames = 0, lastErr = '';
-        var video = document.getElementById('video');
-        reader.decodeFromConstraints({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
-          video, function (result, err) {
-            frames++;
-            if (err && err.name !== 'NotFoundException' && err.name !== lastErr) { lastErr = err.name; log('decode error: ' + err.name + ' ' + err.message); }
-            if (frames === 1 || frames % 20 === 0) log('frames tried: ' + frames + ' · video ' + video.videoWidth + '×' + video.videoHeight);
-            if (result) {
-              document.getElementById('result').textContent = result.getText() + ' (' + ZXing.BarcodeFormat[result.getBarcodeFormat()] + ')';
-              document.getElementById('result').className = 'ok';
-              if (navigator.vibrate) navigator.vibrate(80);
-            }
-          }).then(function () { log('camera started'); })
+        var hits = 0;
+        var scanner = new HHScanner(document.getElementById('video'), function (text, how) {
+          hits++;
+          document.getElementById('result').textContent = text + ' (' + how + ') · อ่านได้ ' + hits + ' ครั้ง';
+          document.getElementById('result').className = 'ok';
+          if (navigator.vibrate) navigator.vibrate(80);
+        }, function (s) {
+          if (s.error) log('decode error: ' + s.error);
+          else if (s.frames % 50 === 0) log('frames tried: ' + s.frames + ' · video ' + s.width + '×' + s.height);
+        });
+        scanner.start().then(function () { log('camera started (scanner v2: centre crop + jsQR)'); })
           .catch(function (e) { log('camera FAILED: ' + (e && (e.name + ' ' + e.message))); });
       });
     })();

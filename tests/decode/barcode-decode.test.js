@@ -82,3 +82,39 @@ test('card QR codes decode to the same payload as the Code 128 barcode', () => {
     assert.deepEqual(B.parse(decodeQr(payload)), B.parse(payload));
   }
 });
+
+const jsQR = require('jsqr');
+
+test('jsQR (scan page QR decoder) reads card QR codes, including a downscaled blurry copy', () => {
+  for (const id of ['9900004', '6512345678']) {
+    const payload = B.payload(id, 1, 'secret', hmacBytes);
+    const qr = qrcode(0, 'M');
+    qr.addData(payload);
+    qr.make();
+    const n = qr.getModuleCount();
+    const cell = 6;
+    const size = (n + 8) * cell;
+    const rgba = new Uint8ClampedArray(size * size * 4).fill(255);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const r = Math.floor(y / cell) - 4, c = Math.floor(x / cell) - 4;
+        if (r >= 0 && c >= 0 && r < n && c < n && qr.isDark(r, c)) {
+          const i = (y * size + x) * 4;
+          rgba[i] = rgba[i + 1] = rgba[i + 2] = 40; // dark grey, like a glossy screen
+        }
+      }
+    }
+    // 3x3 box blur to mimic camera softness
+    const blurred = new Uint8ClampedArray(rgba);
+    for (let y = 1; y < size - 1; y++) {
+      for (let x = 1; x < size - 1; x++) {
+        let s = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += rgba[((y + dy) * size + x + dx) * 4];
+        const i = (y * size + x) * 4;
+        blurred[i] = blurred[i + 1] = blurred[i + 2] = s / 9;
+      }
+    }
+    assert.equal(jsQR(rgba, size, size).data, payload);
+    assert.equal(jsQR(blurred, size, size).data, payload);
+  }
+});

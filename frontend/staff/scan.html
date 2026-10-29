@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>
 </head>
@@ -26,9 +26,13 @@
 
     <!-- camera -->
     <div id="camera-box" class="camera-box">
-      <div id="reader"></div>
+      <div class="viewfinder" id="viewfinder" hidden>
+        <video id="video" playsinline muted></video>
+        <div class="aim"></div>
+      </div>
       <button class="btn" id="start">เริ่มสแกน</button>
     </div>
+    <p class="muted small" id="cam-hint" hidden>ให้บาร์โค้ดอยู่ในแนวนอนเต็มกรอบ ห่างประมาณ 15–25 ซม. · ถ้าส่องจอ ให้เปิดความสว่างจอสูงสุด</p>
 
     <!-- result -->
     <div id="result" class="card result" hidden>
@@ -112,35 +116,50 @@
         flash.t = setTimeout(function () { f.hidden = true; }, ms || 1800);
       }
 
-      // ---- camera ----
+      // ---- camera: ZXing on the full frame, high resolution, Code 128 only ----
+      // Results are ignored while a lookup/result is open ("paused"); the camera keeps running.
+      var paused = false;
+      var lastText = '';
+      var lastTextAt = 0;
+
       function startCamera() {
         $('start').hidden = true;
-        scanner = scanner || new Html5Qrcode('reader', {
-          formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          verbose: false,
-        });
-        var w = Math.min(window.innerWidth - 40, 480);
-        scanner.start({ facingMode: 'environment' },
-          { fps: 12, qrbox: { width: w * 0.9, height: Math.round(w * 0.4) }, aspectRatio: 1.333 },
-          onDecoded, function () {}
-        ).catch(function () {
+        var hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        scanner = new ZXing.BrowserMultiFormatReader(hints, 150);
+        var constraints = {
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            advanced: [{ focusMode: 'continuous' }],
+          },
+        };
+        $('viewfinder').hidden = false;
+        $('cam-hint').hidden = false;
+        scanner.decodeFromConstraints(constraints, $('video'), function (result) {
+          if (result) onDecoded(result.getText());
+        }).catch(function () {
+          $('viewfinder').hidden = true;
           $('start').hidden = false;
-          flash('เปิดกล้องไม่ได้ — อนุญาตการใช้กล้อง หรือใช้ช่องพิมพ์รหัสด้านล่าง', 'bad', 4000);
+          flash('เปิดกล้องไม่ได้ — กดอนุญาตการใช้กล้อง หรือใช้ช่องพิมพ์รหัสด้านล่าง', 'bad', 4000);
         });
       }
 
-      function pauseCamera() {
-        try { if (scanner && scanner.getState() === Html5QrcodeScannerState.SCANNING) scanner.pause(true); } catch (e) {}
-      }
-      function resumeCamera() {
-        try { if (scanner && scanner.getState() === Html5QrcodeScannerState.PAUSED) scanner.resume(); } catch (e) {}
-      }
+      function pauseCamera() { paused = true; }
+      function resumeCamera() { paused = false; }
 
       $('start').addEventListener('click', startCamera);
 
       function onDecoded(text) {
-        if (busy || current) return;
+        if (paused || busy || current) return;
+        // The same card stays in view after a cancel; ignore it for a few seconds.
+        var now = Date.now();
+        if (text === lastText && now - lastTextAt < 4000) return;
+        lastText = text;
+        lastTextAt = now;
         beep(true);
         pauseCamera();
         lookup({ code: text });

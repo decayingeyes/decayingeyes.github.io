@@ -3,7 +3,7 @@
   "private": true,
   "description": "Event staff attendance (System B) + haunted house ticket booking (System A).",
   "scripts": {
-    "test": "node --test \"tests/core/**/*.test.js\"",
+    "test": "node --test \"tests/core/**/*.test.js\" \"tests/decode/**/*.test.js\"",
     "test:api": "node --test \"tests/api/**/*.test.js\"",
     "push:test": "node tools/clasp-env.js test push",
     "push:prod": "node tools/clasp-env.js prod push",
@@ -15,6 +15,8 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@google/clasp": "^3.4.1"
+    "@google/clasp": "^3.4.1",
+    "@zxing/library": "^0.21.3",
+    "jsbarcode": "^3.11.6"
   }
 }

@@ -52,6 +52,8 @@
       // A shared signup link may carry the join code: …/register.html?join=K7MPQ2
       var joinFromLink = new URLSearchParams(location.search).get('join');
       if (joinFromLink) $('join').value = joinFromLink;
+      var sidFromLink = new URLSearchParams(location.search).get('sid');
+      if (sidFromLink) { $('sid').value = sidFromLink; $('fn').focus(); }
       $('form').addEventListener('submit', function (e) {
         e.preventDefault();
         if ($('pw').value !== $('pw2').value) { HH.say($('msg'), 'รหัสผ่านสองช่องไม่ตรงกัน', 'bad'); return; }

@@ -12,6 +12,11 @@ function handleAuthActivate_(payload, ctx) {
 
   var member = HHLock.withLock(function () {
     var m = HHRepo.findBy('Members', 'StudentID', sid);
+    // The shared join code typed on the activation page (easy mix-up: both are
+    // 6 characters): send them to sign-up instead of failing.
+    if (!m && HHAuth.joinCodeResult(payload.code, cfg.SIGNUP_JOIN_CODE) === 'match') {
+      throw new HHErrors.AppError('USE_SIGNUP');
+    }
     var expected = m ? String(m.data.ActivationCodeHash) : '';
     var given = HHAuth.hashActivationCode(payload.code, HHAccounts.pepper(), HHCrypto.sha256Hex);
     if (!m || !expected || m.data.Status !== 'ACTIVE' || !HHAuth.safeEqual(expected, given)) {
@@ -101,11 +106,11 @@ function handleAuthSignup_(payload, ctx) {
   if (problem) throw new HHErrors.AppError('VALIDATION', problem);
   HHRateLimit.assertNotLocked('signup', f.studentId);
   // Shared join code: correct -> active at once; wrong -> refused (rate-limited
-  // across all ids so it cannot be guessed); empty -> waits for an admin.
+  // per student id, so a few typos never lock out the whole crew); empty -> waits for an admin.
   var join = HHAuth.joinCodeResult(payload.joinCode, cfg.SIGNUP_JOIN_CODE);
   if (join === 'wrong') {
-    HHRateLimit.assertNotLocked('joincode', 'all');
-    HHRateLimit.recordFailure('joincode', 'all');
+    HHRateLimit.assertNotLocked('joincode', f.studentId);
+    HHRateLimit.recordFailure('joincode', f.studentId);
     throw new HHErrors.AppError('VALIDATION', 'รหัสเข้าร่วมงานไม่ถูกต้อง (ไม่มีรหัสก็เว้นว่างไว้ แล้วรอแอดมินอนุมัติ)');
   }
 

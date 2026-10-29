@@ -51,6 +51,13 @@
           userAgent: navigator.userAgent,
         }).then(function (res) {
           HH.busy(btn, false);
+          if (!res.ok && res.error.code === 'USE_SIGNUP') {
+            HH.say(msg, res.error.messageTh, 'ok');
+            var q = '?join=' + encodeURIComponent(document.getElementById('code').value.trim()) +
+              '&sid=' + encodeURIComponent(document.getElementById('sid').value.trim());
+            setTimeout(function () { window.location.href = 'register.html' + q; }, 900);
+            return;
+          }
           if (!res.ok) { HH.say(msg, HH.errorText(res), 'bad'); return; }
           HH.token.set(res.data.token);
           window.location.replace('portal.html');

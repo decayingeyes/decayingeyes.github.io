@@ -27,7 +27,11 @@ var HHRepo = (function () {
   function update(sheetName, row, fields) {
     var sh = HHSheets.sheet(sheetName);
     Object.keys(fields).forEach(function (h) {
-      sh.getRange(row, colIndex(sheetName, h)).setValue(fields[h] === null || fields[h] === undefined ? '' : fields[h]);
+      var cell = sh.getRange(row, colIndex(sheetName, h));
+      var v = fields[h] === null || fields[h] === undefined ? '' : fields[h];
+      cell.setValue(v);
+      // Cells written later (e.g. Out) do not inherit the row's date-time format.
+      if (v instanceof Date) cell.setNumberFormat(HHSchema.DATETIME_FORMAT);
     });
   }
 

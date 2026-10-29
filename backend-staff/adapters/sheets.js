@@ -80,6 +80,9 @@ var HHSheets = (function () {
       HHSchema.textColumnIndexes(name).forEach(function (col) {
         sh.getRange(2, col, sh.getMaxRows() - 1, 1).setNumberFormat('@');
       });
+      HHSchema.datetimeColumnIndexes(name).forEach(function (col) {
+        sh.getRange(2, col, sh.getMaxRows() - 1, 1).setNumberFormat(HHSchema.DATETIME_FORMAT);
+      });
     });
     removeDefaultSheet_(book, created);
     clearSchemaCache();

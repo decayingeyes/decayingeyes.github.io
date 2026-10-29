@@ -44,6 +44,18 @@ var HHSchema = (function () {
     'ReviewedBy', 'ResolvedBy', 'GrantedBy', 'ClosedBy', 'WorkDate', 'Date', 'StartDate', 'EndDate',
     'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value'];
 
+  /** Columns holding Date values; shown with date AND time (Sheets defaults to date only). */
+  var DATETIME_COLUMNS = ['Timestamp', 'In', 'Out', 'CreatedAt', 'ExpiresAt', 'ActivatedAt', 'GrantedAt',
+    'ProposedIn', 'ProposedOut', 'ProposedAt', 'ReviewedAt', 'ClosedAt', 'UpdatedAt'];
+  var DATETIME_FORMAT = 'yyyy-mm-dd hh:mm:ss';
+
+  function datetimeColumnIndexes(sheetName) {
+    var h = SHEETS[sheetName] || [];
+    var out = [];
+    h.forEach(function (name, i) { if (DATETIME_COLUMNS.indexOf(name) !== -1) out.push(i + 1); });
+    return out;
+  }
+
   function textColumnIndexes(sheetName) {
     var h = SHEETS[sheetName] || [];
     var out = [];
@@ -81,6 +93,9 @@ var HHSchema = (function () {
     SHEETS: SHEETS,
     TEXT_COLUMNS: TEXT_COLUMNS,
     textColumnIndexes: textColumnIndexes,
+    DATETIME_COLUMNS: DATETIME_COLUMNS,
+    DATETIME_FORMAT: DATETIME_FORMAT,
+    datetimeColumnIndexes: datetimeColumnIndexes,
     sheetNames: sheetNames,
     headers: headers,
     compareHeaders: compareHeaders,

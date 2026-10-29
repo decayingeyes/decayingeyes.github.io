@@ -28,3 +28,4 @@
 - New action `roster.list` (admin member list). New log action `ROLE_SET`.
 - Role/status changes apply immediately (per-member cache epoch) instead of after up to 10 minutes.
 - Corrections may not overlap another session of the same member (checked on propose and again on approve); approval writes the hours before marking the request APPROVED.
+- Site moved to https://decayingeyes.github.io/ (GitHub account renamed to `decayingeyes`, repository renamed to `decayingeyes.github.io`).

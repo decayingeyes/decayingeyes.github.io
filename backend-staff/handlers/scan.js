@@ -176,6 +176,7 @@ function handleScanConfirm_(payload, ctx) {
       actorId: ctx.actor.studentId, method: t.method, flags: flags, reason: reason,
     });
     CacheService.getScriptCache().put(lastScanKey_(String(m.StudentID)), String(now.getTime()), LAST_SCAN_CACHE_SECONDS);
+    HHSummarySheets.markDirty();
     return result;
   });
 }

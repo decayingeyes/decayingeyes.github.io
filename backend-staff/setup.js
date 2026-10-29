@@ -9,6 +9,8 @@ function onOpen() {
     .addItem('ตั้งค่าเป็นโหมดทดสอบ (TEST)', 'menuSetupTest')
     .addItem('ตั้งค่าเป็นโหมดใช้งานจริง (PROD)', 'menuSetupProd')
     .addSeparator()
+    .addItem('อัปเดตสรุปวันนี้/รายวัน ตอนนี้', 'menuRefreshSummary')
+    .addSeparator()
     .addItem('นำเข้ารายชื่อจากชีต RosterImport', 'menuImportRoster')
     .addItem('ออกรหัสเปิดใช้งาน (รายคน)', 'menuIssueCode')
     .addItem('สร้างข้อมูลตัวอย่าง (เฉพาะ TEST)', 'menuSeedTest')
@@ -102,6 +104,8 @@ function setupAs_(env) {
 
   var result = HHSheets.ensureSchema();
   var added = HHConfig.ensureDefaults();
+  installTriggers_();
+  HHSummarySheets.refresh();
 
   var msg = 'ตั้งค่าเสร็จแล้ว: โหมด ' + env +
     '\nสร้างชีตใหม่ ' + result.created.length + ' แผ่น, เพิ่มค่า Config ' + added + ' รายการ';
@@ -109,6 +113,22 @@ function setupAs_(env) {
     msg += '\n\n⚠️ พบปัญหาหัวตาราง:\n' + result.problems.join('\n');
   }
   ui.alert(msg);
+}
+
+/** (Re)create time-driven triggers; safe to run repeatedly. */
+function installTriggers_() {
+  var wanted = { summaryTick: function (b) { return b.everyMinutes(1); } };
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (wanted[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
+  });
+  Object.keys(wanted).forEach(function (fn) {
+    wanted[fn](ScriptApp.newTrigger(fn).timeBased()).create();
+  });
+}
+
+function menuRefreshSummary() {
+  HHSummarySheets.refresh();
+  SpreadsheetApp.getUi().alert('อัปเดตแท็บ "' + HHSummarySheets.TODAY_SHEET + '" และ "' + HHSummarySheets.MATRIX_SHEET + '" แล้ว');
 }
 
 function menuValidateSchema() {

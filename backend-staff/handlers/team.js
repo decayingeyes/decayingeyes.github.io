@@ -52,8 +52,9 @@ function handleRosterImport_(payload, ctx) {
     throw new HHErrors.AppError('VALIDATION', 'กรุณาวางข้อมูล CSV');
   }
   var unitId = ctx.actor.role === 'super_admin' ? null : ctx.actor.unitId;
+  // Web imports never set positions: new people join as member; roles come from role.set.
   var result = HHAccounts.importRoster(HHRoster.parseCsv(payload.csv), {
-    unitId: unitId, actorId: ctx.actor.studentId, requestId: ctx.requestId,
+    unitId: unitId, actorId: ctx.actor.studentId, requestId: ctx.requestId, rolesFromCsv: false,
   });
   HHOrg.clearCache();
   return result;

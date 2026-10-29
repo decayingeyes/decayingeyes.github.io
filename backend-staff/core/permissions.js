@@ -57,6 +57,8 @@ var HHPermissions = (function () {
     'correction.reject': { minRole: 'unit_admin', scope: 'unit' },
     'roster.import': { minRole: 'unit_admin', scope: 'unit' },
     'roster.update': { minRole: 'unit_admin', scope: 'unit' },
+    // Not in spec v4: member list for the admin page's member management tab.
+    'roster.list': { minRole: 'unit_admin', scope: 'unit' },
     'role.set': { minRole: 'unit_admin', scope: 'unit' },
     'scanner.assign': { minRole: 'unit_admin', scope: 'unit' },
     'code.reissue': { minRole: 'unit_admin', scope: 'unit' },

@@ -106,7 +106,26 @@ var HHAuth = (function () {
     return null;
   }
 
+  /**
+   * Role changes (decision 2026-10-30): everyone joins as member; only unit
+   * admins and super admins assign positions. Unit admins assign up to head
+   * within their unit; making or changing admins is for super admins only.
+   * @return {string|null} Thai reason when not allowed
+   */
+  function roleChangeProblem(actor, target, newRole) {
+    var rank = P().ROLE_RANK;
+    if (!P().isRole(newRole)) return 'ตำแหน่งไม่ถูกต้อง';
+    if (String(target.StudentID) === String(actor.studentId)) return 'เปลี่ยนตำแหน่งของตัวเองไม่ได้';
+    if (actor.role === 'super_admin') return null;
+    if (actor.role !== 'unit_admin') return 'ต้องเป็นแอดมินแผนกขึ้นไป';
+    if (String(target.UnitID) !== String(actor.unitId)) return 'สมาชิกคนนี้อยู่แผนกอื่น';
+    if (rank[target.Role] >= rank.unit_admin) return 'เปลี่ยนตำแหน่งแอดมินได้เฉพาะผู้ดูแลระบบสูงสุด';
+    if (rank[newRole] >= rank.unit_admin) return 'แต่งตั้งแอดมินได้เฉพาะผู้ดูแลระบบสูงสุด';
+    return null;
+  }
+
   return {
+    roleChangeProblem: roleChangeProblem,
     activationCodeProblem: activationCodeProblem,
     CODE_ALPHABET: CODE_ALPHABET,
     CODE_LENGTH: CODE_LENGTH,

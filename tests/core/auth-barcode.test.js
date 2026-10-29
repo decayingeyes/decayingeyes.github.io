@@ -105,3 +105,38 @@ test('activation code issuing: self, unit, team and rank rules', () => {
   assert.equal(A.activationCodeProblem(sup, m('A2', 'unit_admin', 'U02', 'T01')), null);
   assert.ok(A.activationCodeProblem(sup, m('S1', 'super_admin', 'U01', 'T09')));
 });
+
+test('role changes: only admins, never self, unit admins up to head', () => {
+  const ua = { studentId: 'A1', role: 'unit_admin', unitId: 'U01' };
+  const sa = { studentId: 'S1', role: 'super_admin', unitId: 'U01' };
+  const head = { studentId: 'H1', role: 'head', unitId: 'U01' };
+  const m = (id, role, unit = 'U01') => ({ StudentID: id, Role: role, UnitID: unit });
+  assert.equal(A.roleChangeProblem(ua, m('M1', 'member'), 'head'), null);
+  assert.equal(A.roleChangeProblem(ua, m('M1', 'head'), 'deputy'), null);
+  assert.ok(A.roleChangeProblem(ua, m('M1', 'member'), 'unit_admin'));
+  assert.ok(A.roleChangeProblem(ua, m('A2', 'unit_admin'), 'member'));
+  assert.ok(A.roleChangeProblem(ua, m('S2', 'super_admin'), 'member'));
+  assert.ok(A.roleChangeProblem(ua, m('M2', 'member', 'U02'), 'head'));
+  assert.ok(A.roleChangeProblem(ua, m('A1', 'unit_admin'), 'member')); // self
+  assert.ok(A.roleChangeProblem(head, m('M1', 'member'), 'deputy'));
+  assert.ok(A.roleChangeProblem(ua, m('M1', 'member'), 'boss'));
+  assert.equal(A.roleChangeProblem(sa, m('A2', 'unit_admin', 'U02'), 'member'), null);
+  assert.equal(A.roleChangeProblem(sa, m('M1', 'member'), 'unit_admin'), null);
+  assert.ok(A.roleChangeProblem(sa, m('S1', 'super_admin'), 'member')); // self
+});
+
+test('roster plan: web imports ignore Role (everyone joins as member)', () => {
+  const R = require('../../backend-staff/core/roster');
+  const current = { units: [{ UnitID: 'U01', Name: 'บ้าน' }], departments: [], teams: [],
+    members: [{ StudentID: '6510002', UnitID: 'U01', Role: 'head' }] };
+  const rows = R.validate([
+    ['StudentID', 'FirstName', 'LastName', 'Nickname', 'Unit', 'Department', 'Team', 'Role'],
+    ['6510001', 'a', 'b', 'c', 'บ้าน', 'D', 'T', 'head'],
+    ['6510002', 'a', 'b', 'c', 'บ้าน', 'D', 'T', 'member'],
+  ]).rows;
+  const p = R.plan(rows, current, { unitId: 'U01', rolesFromCsv: false });
+  assert.equal(p.inserts[0].Role, 'member');
+  assert.equal('Role' in p.updates[0], false); // existing head keeps the role
+  const owner = R.plan(rows, current, { unitId: null });
+  assert.equal(owner.inserts[0].Role, 'head'); // sheet menu / seed may still set roles
+});

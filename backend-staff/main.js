@@ -34,6 +34,8 @@ function handlers_() {
     'team.status': handleTeamStatus_,
     'team.activationCode.issue': handleTeamActivationCodeIssue_,
     'roster.import': handleRosterImport_,
+    'roster.list': handleRosterList_,
+    'role.set': handleRoleSet_,
   };
 }
 

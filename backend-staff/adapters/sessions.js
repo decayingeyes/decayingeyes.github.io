@@ -37,9 +37,11 @@ var HHSessions = (function () {
     if (hit === 'none') return null;
     if (hit) {
       var c = JSON.parse(hit);
-      if (new Date(c.expiresAt) > new Date()) return c.actor;
+      // A role/status change bumps the member's epoch, invalidating cached actors at once.
+      var epoch = Number(cache.get(epochKey_(c.actor.studentId)) || 0);
+      if (new Date(c.expiresAt) > new Date() && (c.cachedAt || 0) >= epoch) return c.actor;
       cache.remove(cacheKey_(hash));
-      return null;
+      if (new Date(c.expiresAt) <= new Date()) return null;
     }
     var s = HHRepo.findBy('AuthSessions', 'Token', hash);
     var actor = null;
@@ -52,11 +54,20 @@ var HHSessions = (function () {
       }
     }
     if (actor) {
-      cache.put(cacheKey_(hash), JSON.stringify({ actor: actor, expiresAt: expiresAt.toISOString() }), CACHE_SECONDS);
+      cache.put(cacheKey_(hash), JSON.stringify({ actor: actor, expiresAt: expiresAt.toISOString(), cachedAt: Date.now() }), CACHE_SECONDS);
     } else {
       cache.put(cacheKey_(hash), 'none', 60);
     }
     return actor;
+  }
+
+  function epochKey_(studentId) {
+    return 'epoch:' + studentId;
+  }
+
+  /** Make every cached login of this member re-read role/status on the next request. */
+  function invalidateMember(studentId) {
+    CacheService.getScriptCache().put(epochKey_(String(studentId)), String(Date.now()), 21600);
   }
 
   function revoke(token) {
@@ -81,6 +92,7 @@ var HHSessions = (function () {
     create: create,
     resolve: resolve,
     revoke: revoke,
+    invalidateMember: invalidateMember,
     toActor: toActor_,
   };
 })();

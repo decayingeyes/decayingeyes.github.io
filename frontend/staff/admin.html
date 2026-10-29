@@ -12,17 +12,68 @@
 </head>
 <body>
   <main class="wide">
-    <div class="scan-top">
+    <div class="scan-top no-print">
       <h1>🛠️ หน้าแอดมิน</h1>
       <a href="portal.html" class="muted">กลับ</a>
     </div>
-    <p class="muted" id="meta">กำลังโหลด…</p>
+    <p class="muted no-print" id="meta">กำลังโหลด…</p>
 
-    <section id="body" hidden>
-      <h2>✅ รออนุมัติ</h2>
+    <nav class="tabs no-print" id="tabs" hidden>
+      <button data-tab="approve">✅ อนุมัติ <span class="count-badge" id="n-pending" hidden></span></button>
+      <button data-tab="members">👥 สมาชิก</button>
+      <button data-tab="periods">🔒 ปิดงวด / ส่งออก</button>
+    </nav>
+
+    <!-- ===== approvals ===== -->
+    <section class="tab-panel no-print" id="tab-approve" hidden>
       <p class="muted small">คำขอแก้ไขชั่วโมงจากหัวหน้า และการรายงานตัวเองของหัวหน้า — ชั่วโมงจะนับเมื่ออนุมัติแล้วเท่านั้น</p>
       <div id="pending"></div>
+      <h2>🕘 พิจารณาล่าสุด</h2>
+      <div id="recent"></div>
+    </section>
 
+    <!-- ===== members ===== -->
+    <section class="tab-panel" id="tab-members" hidden>
+      <div class="no-print">
+        <div class="role-summary" id="role-summary"></div>
+
+        <details class="card import-box" id="import-box">
+          <summary>➕ เพิ่มสมาชิก (วางรายชื่อจาก Excel / Google Sheets)</summary>
+          <ol class="steps small">
+            <li>ใน Excel/Sheets เตรียมคอลัมน์: <b>รหัสนักศึกษา, ชื่อ, นามสกุล, ชื่อเล่น, ฝ่าย, ทีม</b> (กะ/เวร ใส่หรือไม่ก็ได้)</li>
+            <li>เลือกตั้งแต่<b>หัวตาราง</b>จนถึงคนสุดท้าย แล้วคัดลอก (Ctrl+C)</li>
+            <li>วางในช่องด้านล่าง กด <b>ตรวจสอบ</b> แล้วกด <b>นำเข้า</b></li>
+          </ol>
+          <p class="muted small">ทุกคนที่เพิ่มเข้ามาจะเป็น <b>สมาชิก</b> ก่อน — มอบตำแหน่งได้ทีหลังจากรายชื่อด้านล่าง · รหัสที่มีอยู่แล้วจะอัปเดตชื่อ/ทีม แต่ตำแหน่งเดิมไม่เปลี่ยน</p>
+          <textarea id="paste" rows="6" placeholder="วางรายชื่อที่นี่…"></textarea>
+          <div class="two">
+            <button class="btn secondary" id="preview-btn" type="button">ตรวจสอบ</button>
+            <button class="btn" id="import-btn" type="button" disabled>นำเข้า</button>
+          </div>
+          <p class="msg" id="import-msg"></p>
+          <div id="preview"></div>
+        </details>
+
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="🔎 ค้นหาชื่อ ชื่อเล่น หรือรหัส" autocomplete="off">
+          <select id="team-filter"><option value="">ทุกทีม</option></select>
+        </div>
+        <p class="muted small" id="member-count"></p>
+        <div id="member-list"></div>
+      </div>
+
+      <!-- printable list of activation codes after an import -->
+      <div id="codes-box" hidden>
+        <div class="no-print mr-head">
+          <h2>🔑 รหัสเปิดใช้งาน (แจกต่อหน้า แล้วลบทิ้ง)</h2>
+          <button class="btn secondary" id="print-codes" type="button" style="width:auto">🖨️ พิมพ์</button>
+        </div>
+        <table class="codes" id="codes"></table>
+      </div>
+    </section>
+
+    <!-- ===== periods & export ===== -->
+    <section class="tab-panel no-print" id="tab-periods" hidden>
       <h2>🔒 ปิดงวด</h2>
       <div class="card">
         <p class="muted small">ปิดแล้วจะสแกน/แก้ไขชั่วโมงในช่วงนี้ไม่ได้ และระบบจะสร้างไฟล์สรุปชั่วโมงให้ (เปิดคืนได้เฉพาะผู้ดูแลระบบสูงสุด)</p>
@@ -44,9 +95,6 @@
         <button class="btn secondary" id="export">ดาวน์โหลด CSV</button>
         <p class="msg" id="e-msg"></p>
       </div>
-
-      <h2>🕘 พิจารณาล่าสุด</h2>
-      <div id="recent"></div>
     </section>
   </main>
 
@@ -60,8 +108,21 @@
         if (text !== undefined) e.textContent = text;
         return e;
       }
-      var TYPE_TH = { CORRECTION: '✏️ ขอแก้ไขชั่วโมง', SELF_REPORT: '🙋 รายงานตัวเอง' };
-      var STATUS_TH = { APPROVED: 'อนุมัติแล้ว', REJECTED: 'ปฏิเสธ', PENDING: 'รออนุมัติ' };
+
+      // ---------- tabs (remembered in the URL hash) ----------
+      function showTab(name) {
+        ['approve', 'members', 'periods'].forEach(function (t) {
+          $('tab-' + t).hidden = t !== name;
+        });
+        Array.prototype.forEach.call($('tabs').children, function (b) {
+          b.classList.toggle('on', b.dataset.tab === name);
+        });
+        if (location.hash !== '#' + name) history.replaceState(null, '', '#' + name);
+        if (name === 'members' && !membersLoaded) loadMembers();
+      }
+      Array.prototype.forEach.call($('tabs').children, function (b) {
+        b.addEventListener('click', function () { showTab(b.dataset.tab); });
+      });
 
       function download(name, text) {
         var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
@@ -73,6 +134,10 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
       }
 
+      // ---------- approvals ----------
+      var TYPE_TH = { CORRECTION: '✏️ ขอแก้ไขชั่วโมง', SELF_REPORT: '🙋 รายงานตัวเอง' };
+      var STATUS_TH = { APPROVED: 'อนุมัติแล้ว', REJECTED: 'ปฏิเสธ', PENDING: 'รออนุมัติ' };
+
       function correctionCard(c, withActions) {
         var card = el('div', 'card');
         var head = el('div', 'mr-head');
@@ -80,11 +145,9 @@
         head.appendChild(el('span', 'badge ' + c.status.toLowerCase(), STATUS_TH[c.status] || c.status));
         card.appendChild(head);
         card.appendChild(el('div', 'muted small', c.studentId + ' · วันที่ ' + c.workDate + ' · เสนอโดย ' + c.proposedBy));
-        if (c.current) {
-          card.appendChild(el('div', 'mr-session', 'ปัจจุบัน: ' + c.current.in + ' → ' + (c.current.out || '?') + ' · นับ ' + c.current.countedHours + ' ชม.'));
-        } else {
-          card.appendChild(el('div', 'mr-session', 'ปัจจุบัน: ไม่มีรอบเข้างาน (จะเพิ่มรอบใหม่)'));
-        }
+        card.appendChild(el('div', 'mr-session', c.current
+          ? 'ปัจจุบัน: ' + c.current.in + ' → ' + (c.current.out || '?') + ' · นับ ' + c.current.countedHours + ' ชม.'
+          : 'ปัจจุบัน: ไม่มีรอบเข้างาน (จะเพิ่มรอบใหม่)'));
         card.appendChild(el('div', 'mr-session', '➡️ ขอเป็น: ' + c.proposedIn + ' → ' + c.proposedOut));
         card.appendChild(el('div', '', 'เหตุผล: ' + c.reason));
         if (c.reviewNote) card.appendChild(el('div', 'muted small', 'บันทึก: ' + c.reviewNote + (c.reviewedBy ? ' (' + c.reviewedBy + ')' : '')));
@@ -96,7 +159,7 @@
         var note = el('input');
         note.placeholder = 'บันทึก (จำเป็นถ้าปฏิเสธ)';
         note.maxLength = 300;
-        var row = el('div', 'resolve');
+        var row = el('div', 'two');
         var ok = el('button', 'btn in', 'อนุมัติ');
         var no = el('button', 'btn secondary', 'ปฏิเสธ');
         var out = el('p', 'msg');
@@ -111,48 +174,281 @@
             HH.call(pair[1], { correctionId: c.correctionId, note: note.value }).then(function (res) {
               HH.busy(pair[0], false);
               if (!res.ok) { HH.say(out, HH.errorText(res), 'bad'); return; }
-              load();
+              loadApprovals();
             });
           });
         });
         return card;
       }
 
-      function load() {
-        HH.call('correction.list').then(function (res) {
+      function loadApprovals() {
+        return HH.call('correction.list').then(function (res) {
           if (!res.ok) {
-            if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return; }
+            if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return false; }
             HH.say($('meta'), res.error.code === 'FORBIDDEN' ? 'หน้านี้สำหรับแอดมินแผนกเท่านั้น' : HH.errorText(res), 'bad');
-            return;
+            return false;
           }
           var d = res.data;
-          $('meta').textContent = 'รออนุมัติ ' + d.pending.length + ' รายการ';
-          $('body').hidden = false;
+          $('meta').hidden = true;
+          $('tabs').hidden = false;
+          $('n-pending').hidden = d.pending.length === 0;
+          $('n-pending').textContent = d.pending.length;
           var p = $('pending');
           p.innerHTML = '';
           if (d.pending.length === 0) p.appendChild(el('p', 'muted', 'ไม่มีรายการรออนุมัติ 🎉'));
           d.pending.forEach(function (c) { p.appendChild(correctionCard(c, true)); });
           var r = $('recent');
           r.innerHTML = '';
+          if (d.recent.length === 0) r.appendChild(el('p', 'muted', 'ยังไม่มี'));
           d.recent.forEach(function (c) { r.appendChild(correctionCard(c, false)); });
-          var per = $('periods');
-          per.innerHTML = '';
-          d.periods.forEach(function (x) {
-            var card = el('div', 'card');
-            var head = el('div', 'mr-head');
-            head.appendChild(el('b', '', x.startDate + ' ถึง ' + x.endDate));
-            head.appendChild(el('span', 'badge ' + (x.status === 'CLOSED' ? 'locked' : 'open'), x.status === 'CLOSED' ? 'ปิดแล้ว' : 'เปิดคืนแล้ว'));
-            card.appendChild(head);
-            card.appendChild(el('div', 'muted small', 'ปิดโดย ' + x.closedBy + (x.reopenReason ? ' · เหตุผลที่เปิดคืน: ' + x.reopenReason : '')));
-            if (x.exportLink) {
-              var a = el('a', '', 'เปิดไฟล์สรุปในชีต');
-              a.href = x.exportLink;
-              a.target = '_blank';
-              a.rel = 'noopener';
-              card.appendChild(a);
-            }
-            per.appendChild(card);
+          renderPeriods(d.periods);
+          return true;
+        });
+      }
+
+      // ---------- members ----------
+      var membersLoaded = false;
+      var roster = null;
+      var openPanel = null; // studentId whose manage panel is open
+      var ROLE_ICON = { member: '🙂', deputy: '🔰', head: '⭐', unit_admin: '🛠️', super_admin: '👑' };
+
+      function loadMembers() {
+        membersLoaded = true;
+        $('member-count').textContent = 'กำลังโหลดรายชื่อ…';
+        return HH.call('roster.list').then(function (res) {
+          if (!res.ok) { HH.say($('member-count'), HH.errorText(res), 'bad'); return; }
+          roster = res.data;
+          var sel = $('team-filter');
+          if (sel.options.length === 1) {
+            roster.teams.forEach(function (t) {
+              var o = el('option', '', t.name);
+              o.value = t.teamId;
+              sel.appendChild(o);
+            });
+          }
+          renderSummary();
+          renderMembers();
+        });
+      }
+
+      function renderSummary() {
+        var box = $('role-summary');
+        box.innerHTML = '';
+        var activated = roster.members.filter(function (m) { return m.activated; }).length;
+        var chip = function (big, small) {
+          var c = el('div', 'count');
+          c.appendChild(el('b', '', big));
+          c.appendChild(el('span', '', small));
+          box.appendChild(c);
+        };
+        chip(String(roster.members.length), 'สมาชิกทั้งหมด');
+        chip(activated + '/' + roster.members.length, 'เปิดใช้งานแล้ว');
+        roster.roles.forEach(function (r) {
+          var n = roster.members.filter(function (m) { return m.role === r.role; }).length;
+          if (n > 0 && r.role !== 'member') chip(String(n), ROLE_ICON[r.role] + ' ' + r.th);
+        });
+      }
+
+      function renderMembers() {
+        var q = $('search').value.trim().toLowerCase();
+        var team = $('team-filter').value;
+        var list = roster.members.filter(function (m) {
+          if (team && m.teamId !== team) return false;
+          if (!q) return true;
+          return (m.nickname + ' ' + m.fullName + ' ' + m.studentId).toLowerCase().indexOf(q) !== -1;
+        });
+        $('member-count').textContent = 'แสดง ' + list.length + ' จาก ' + roster.members.length + ' คน';
+        var box = $('member-list');
+        box.innerHTML = '';
+        list.forEach(function (m) { box.appendChild(memberRow(m)); });
+        if (list.length === 0) box.appendChild(el('p', 'muted', 'ไม่พบสมาชิกที่ค้นหา'));
+      }
+
+      function memberRow(m) {
+        var row = el('div', 'card member-admin');
+        row.style.borderLeftColor = m.deptColor;
+        var head = el('div', 'mr-head');
+        var left = el('div');
+        left.appendChild(el('span', 'mr-nick', m.nickname + ' '));
+        left.appendChild(el('span', 'role-badge role-' + m.role, ROLE_ICON[m.role] + ' ' + m.roleTh));
+        head.appendChild(left);
+        var manage = el('button', 'btn secondary small-btn', openPanel === m.studentId ? 'ปิด' : 'จัดการ');
+        manage.type = 'button';
+        head.appendChild(manage);
+        row.appendChild(head);
+        row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.deptName + ' / ' + m.teamName));
+        row.appendChild(el('div', 'small ' + (m.activated ? 'ok' : 'warn'), m.activated ? '✅ เปิดใช้งานบัญชีแล้ว' : '⏳ ยังไม่เปิดใช้งาน'));
+        manage.addEventListener('click', function () {
+          openPanel = openPanel === m.studentId ? null : m.studentId;
+          renderMembers();
+        });
+        if (openPanel === m.studentId) row.appendChild(managePanel(m));
+        return row;
+      }
+
+      function managePanel(m) {
+        var panel = el('div', 'manage');
+        var out = el('p', 'msg');
+
+        panel.appendChild(el('div', 'small muted', 'ตำแหน่ง'));
+        var picker = el('div', 'role-picker');
+        var confirmBox = el('div', 'confirm');
+        confirmBox.hidden = true;
+        roster.roles.forEach(function (r) {
+          var b = el('button', 'role-opt' + (r.role === m.role ? ' current' : ''), ROLE_ICON[r.role] + ' ' + r.th);
+          b.type = 'button';
+          var allowed = m.canSetTo.indexOf(r.role) !== -1;
+          b.disabled = r.role === m.role || !allowed;
+          b.addEventListener('click', function () {
+            // In-page confirmation (no browser dialogs).
+            confirmBox.innerHTML = '';
+            confirmBox.appendChild(el('div', '', 'เปลี่ยน ' + m.nickname + ' จาก "' + m.roleTh + '" เป็น "' + r.th + '" ?'));
+            var yes = el('button', 'btn in', 'ยืนยัน');
+            var no = el('button', 'btn secondary', 'ยกเลิก');
+            var two = el('div', 'two');
+            two.appendChild(yes);
+            two.appendChild(no);
+            confirmBox.appendChild(two);
+            confirmBox.hidden = false;
+            no.addEventListener('click', function () { confirmBox.hidden = true; });
+            yes.addEventListener('click', function () {
+              HH.busy(yes, true, 'กำลังบันทึก…');
+              HH.call('role.set', { studentId: m.studentId, role: r.role }).then(function (res) {
+                if (!res.ok) { HH.busy(yes, false); HH.say(out, HH.errorText(res), 'bad'); return; }
+                loadMembers();
+              });
+            });
           });
+          picker.appendChild(b);
+        });
+        panel.appendChild(picker);
+        if (m.canSetTo.length === 0) {
+          panel.appendChild(el('p', 'muted small', 'คุณเปลี่ยนตำแหน่งของคนนี้ไม่ได้ (ตัวเอง หรือแอดมิน — ต้องให้ผู้ดูแลระบบสูงสุด)'));
+        }
+        panel.appendChild(confirmBox);
+
+        var codeBtn = el('button', 'btn secondary', m.activated ? '🔑 ออกรหัสใหม่ (ลืมรหัสผ่าน)' : '🔑 ออกรหัสเปิดใช้งานใหม่');
+        codeBtn.type = 'button';
+        var codeOut = el('div', 'code-out');
+        codeBtn.addEventListener('click', function () {
+          HH.busy(codeBtn, true, 'กำลังออกรหัส…');
+          HH.call('team.activationCode.issue', { studentId: m.studentId }).then(function (res) {
+            HH.busy(codeBtn, false);
+            if (!res.ok) { HH.say(out, HH.errorText(res), 'bad'); return; }
+            codeOut.innerHTML = '';
+            codeOut.appendChild(el('div', 'small muted', 'บอกรหัสนี้ให้ ' + m.nickname + ' ต่อหน้า (รหัสเก่าใช้ไม่ได้แล้ว)'));
+            codeOut.appendChild(el('div', 'code-big', res.data.code));
+          });
+        });
+        panel.appendChild(codeBtn);
+        panel.appendChild(codeOut);
+        panel.appendChild(out);
+        return panel;
+      }
+
+      $('search').addEventListener('input', function () { if (roster) renderMembers(); });
+      $('team-filter').addEventListener('change', function () { if (roster) renderMembers(); });
+
+      // ---------- import (paste from Excel / Sheets) ----------
+      // Excel and Sheets copy as tab-separated text; convert to CSV for the API.
+      function toCsvText(text) {
+        var lines = text.replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim() !== ''; });
+        if (lines.length === 0) return { csv: '', rows: [] };
+        var tsv = lines[0].indexOf('\t') !== -1;
+        var rows = lines.map(function (l) {
+          return tsv ? l.split('\t').map(function (c) { return c.trim(); }) : null;
+        });
+        if (!tsv) return { csv: lines.join('\n'), rows: lines.map(function (l) { return l.split(','); }) };
+        // Add the unit column automatically: everyone goes into the admin's own unit.
+        var header = rows[0].map(function (h) { return h.toLowerCase(); });
+        var hasUnit = header.indexOf('unit') !== -1 || header.indexOf('แผนก') !== -1;
+        if (!hasUnit) rows = rows.map(function (r, i) { return r.concat([i === 0 ? 'แผนก' : roster.unitName]); });
+        var csv = rows.map(function (r) {
+          return r.map(function (c) { return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(',');
+        }).join('\n');
+        return { csv: csv, rows: rows };
+      }
+
+      var pendingCsv = '';
+      $('preview-btn').addEventListener('click', function () {
+        if (!roster) return;
+        var parsed = toCsvText($('paste').value);
+        var box = $('preview');
+        box.innerHTML = '';
+        if (parsed.rows.length < 2) {
+          HH.say($('import-msg'), 'ต้องมีหัวตาราง + อย่างน้อย 1 คน', 'bad');
+          $('import-btn').disabled = true;
+          return;
+        }
+        pendingCsv = parsed.csv;
+        HH.say($('import-msg'), 'พบ ' + (parsed.rows.length - 1) + ' คน — ตรวจตัวอย่างด้านล่าง แล้วกด "นำเข้า"', 'ok');
+        var t = el('table', 'codes');
+        parsed.rows.slice(0, 6).forEach(function (r, i) {
+          var tr = el('tr');
+          r.forEach(function (c) { tr.appendChild(el(i === 0 ? 'th' : 'td', '', c)); });
+          t.appendChild(tr);
+        });
+        box.appendChild(t);
+        if (parsed.rows.length > 6) box.appendChild(el('p', 'muted small', '… และอีก ' + (parsed.rows.length - 6) + ' คน'));
+        $('import-btn').disabled = false;
+      });
+
+      $('import-btn').addEventListener('click', function () {
+        HH.busy($('import-btn'), true, 'กำลังนำเข้า…');
+        HH.call('roster.import', { csv: pendingCsv }).then(function (res) {
+          HH.busy($('import-btn'), false);
+          if (!res.ok) { HH.say($('import-msg'), HH.errorText(res), 'bad'); return; }
+          var d = res.data;
+          var msg = 'เพิ่มใหม่ ' + d.inserted + ' คน · อัปเดต ' + d.updated + ' คน';
+          if (d.errors.length) msg += ' · ข้าม ' + d.errors.length + ' แถว: ' + d.errors.slice(0, 5).map(function (e) {
+            return (e.line ? 'บรรทัด ' + e.line : e.studentId) + ' ' + e.messageTh;
+          }).join(' / ');
+          HH.say($('import-msg'), msg, d.errors.length ? 'warn' : 'ok');
+          $('import-btn').disabled = true;
+          $('preview').innerHTML = '';
+          $('paste').value = '';
+          showCodes(d.codes);
+          loadMembers();
+        });
+      });
+
+      function showCodes(codes) {
+        if (!codes.length) return;
+        var t = $('codes');
+        t.innerHTML = '';
+        var tr = el('tr');
+        ['ชื่อเล่น', 'รหัสนักศึกษา', 'ทีม', 'รหัสเปิดใช้งาน'].forEach(function (h) { tr.appendChild(el('th', '', h)); });
+        t.appendChild(tr);
+        codes.forEach(function (c) {
+          var r = el('tr');
+          [c.nickname, c.studentId, c.team].forEach(function (v) { r.appendChild(el('td', '', v)); });
+          r.appendChild(el('td', 'code-cell', c.code));
+          t.appendChild(r);
+        });
+        $('codes-box').hidden = false;
+        $('codes-box').scrollIntoView({ behavior: 'smooth' });
+      }
+      $('print-codes').addEventListener('click', function () { window.print(); });
+
+      // ---------- periods & export ----------
+      function renderPeriods(periods) {
+        var per = $('periods');
+        per.innerHTML = '';
+        periods.forEach(function (x) {
+          var card = el('div', 'card');
+          var head = el('div', 'mr-head');
+          head.appendChild(el('b', '', x.startDate + ' ถึง ' + x.endDate));
+          head.appendChild(el('span', 'badge ' + (x.status === 'CLOSED' ? 'locked' : 'open'), x.status === 'CLOSED' ? 'ปิดแล้ว' : 'เปิดคืนแล้ว'));
+          card.appendChild(head);
+          card.appendChild(el('div', 'muted small', 'ปิดโดย ' + x.closedBy + (x.reopenReason ? ' · เหตุผลที่เปิดคืน: ' + x.reopenReason : '')));
+          if (x.exportLink) {
+            var a = el('a', '', 'เปิดไฟล์สรุปในชีต');
+            a.href = x.exportLink;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            card.appendChild(a);
+          }
+          per.appendChild(card);
         });
       }
 
@@ -164,7 +460,7 @@
           if (!res.ok) { HH.say($('p-msg'), HH.errorText(res), 'bad'); return; }
           HH.say($('p-msg'), 'ปิดงวดแล้ว (' + res.data.members + ' คน) — ดาวน์โหลดไฟล์สรุปให้แล้ว', 'ok');
           download(res.data.filename, res.data.csv);
-          load();
+          loadApprovals();
         });
       });
 
@@ -179,7 +475,11 @@
         });
       });
 
-      load();
+      loadApprovals().then(function (ok) {
+        if (!ok) return;
+        var start = (location.hash || '#approve').slice(1);
+        showTab(['approve', 'members', 'periods'].indexOf(start) !== -1 ? start : 'approve');
+      });
     })();
   </script>
 </body>

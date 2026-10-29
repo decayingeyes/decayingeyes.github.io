@@ -1,0 +1,63 @@
+/**
+ * Member management for the admin page: list members and assign positions.
+ * Positions are assigned only here (decision 2026-10-30).
+ */
+
+var ROLE_TH = {
+  member: 'สมาชิก', deputy: 'รองหัวหน้าทีม', head: 'หัวหน้าทีม',
+  unit_admin: 'แอดมินแผนก', super_admin: 'ผู้ดูแลระบบสูงสุด',
+};
+
+function handleRosterList_(payload, ctx) {
+  var unitId = String(ctx.actor.unitId);
+  var teams = unitRows_('Teams', unitId);
+  var depts = {};
+  unitRows_('Departments', unitId).forEach(function (d) { depts[String(d.DeptID)] = { name: String(d.Name), color: String(d.Color || '#888') }; });
+  var teamName = {};
+  teams.forEach(function (t) { teamName[String(t.TeamID)] = String(t.Name); });
+  var members = unitRows_('Members', unitId).map(function (m) {
+    var dept = depts[String(m.DeptID)] || { name: '', color: '#888' };
+    return {
+      studentId: String(m.StudentID), nickname: String(m.Nickname),
+      fullName: String(m.FirstName) + ' ' + String(m.LastName),
+      teamId: String(m.TeamID), teamName: teamName[String(m.TeamID)] || '',
+      deptName: dept.name, deptColor: dept.color,
+      role: String(m.Role), roleTh: ROLE_TH[m.Role] || String(m.Role),
+      activated: !!m.PasswordHash, status: String(m.Status),
+      // What this admin may change it to (empty = locked for this admin).
+      canSetTo: Object.keys(ROLE_TH).filter(function (r) {
+        return r !== String(m.Role) && !HHAuth.roleChangeProblem(ctx.actor, m, r);
+      }),
+    };
+  });
+  var rank = HHPermissions.ROLE_RANK;
+  members.sort(function (a, b) {
+    return rank[b.role] - rank[a.role] || a.teamName.localeCompare(b.teamName, 'th') || a.nickname.localeCompare(b.nickname, 'th');
+  });
+  var unit = unitRows_('Units', unitId)[0];
+  return {
+    unitName: unit ? String(unit.Name) : '',
+    members: members,
+    teams: teams.map(function (t) { return { teamId: String(t.TeamID), name: String(t.Name) }; }),
+    roles: Object.keys(ROLE_TH).map(function (r) { return { role: r, th: ROLE_TH[r] }; }),
+  };
+}
+
+function handleRoleSet_(payload, ctx) {
+  var newRole = String(payload.role || '');
+  return HHLock.withLock(function () {
+    var row = HHRepo.findBy('Members', 'StudentID', HHAuth.normalizeStudentId(payload.studentId));
+    if (!row) throw new HHErrors.AppError('NOT_FOUND', 'ไม่พบรหัสนักศึกษานี้');
+    var problem = HHAuth.roleChangeProblem(ctx.actor, row.data, newRole);
+    if (problem) throw new HHErrors.AppError('FORBIDDEN', problem);
+    var old = String(row.data.Role);
+    if (old === newRole) return { studentId: String(row.data.StudentID), role: newRole, roleTh: ROLE_TH[newRole] };
+    HHRepo.update('Members', row.row, { Role: newRole });
+    HHSessions.invalidateMember(String(row.data.StudentID));
+    HHLog.append({
+      requestId: ctx.requestId, unitId: row.data.UnitID, studentId: row.data.StudentID, action: 'ROLE_SET',
+      actorId: ctx.actor.studentId, method: 'ADMIN', note: old + ' -> ' + newRole,
+    });
+    return { studentId: String(row.data.StudentID), role: newRole, roleTh: ROLE_TH[newRole] };
+  });
+}

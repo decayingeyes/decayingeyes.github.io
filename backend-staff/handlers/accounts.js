@@ -30,7 +30,7 @@ var HHAccounts = (function () {
         teams: HHSheets.readAll('Teams'),
         members: HHSheets.readAll('Members'),
       };
-      var p = HHRoster.plan(v.rows, current, { unitId: ctx.unitId });
+      var p = HHRoster.plan(v.rows, current, { unitId: ctx.unitId, rolesFromCsv: ctx.rolesFromCsv });
       HHRepo.appendMany('Units', p.newUnits);
       HHRepo.appendMany('Departments', p.newDepartments);
       HHRepo.appendMany('Teams', p.newTeams);

@@ -203,7 +203,7 @@ var HHRoster = (function () {
         return;
       }
       // Only unscoped imports (super admin / sheet menu) may grant super_admin.
-      if (scope.unitId && r.Role === 'super_admin') {
+      if (scope.unitId && scope.rolesFromCsv !== false && r.Role === 'super_admin') {
         errors.push({ studentId: r.StudentID, messageTh: 'ตั้งบทบาท super_admin ไม่ได้' });
         return;
       }
@@ -214,6 +214,11 @@ var HHRoster = (function () {
         StudentID: r.StudentID, UnitID: u.UnitID, DeptID: d.DeptID, TeamID: t.TeamID,
         FirstName: r.FirstName, LastName: r.LastName, Nickname: r.Nickname, Shift: r.Shift, Role: r.Role,
       };
+      // Web imports: positions are assigned only through role.set, never by CSV.
+      if (scope.rolesFromCsv === false) {
+        if (existing) delete fields.Role;
+        else fields.Role = 'member';
+      }
       if (existing) updates.push(fields);
       else inserts.push(fields);
     });

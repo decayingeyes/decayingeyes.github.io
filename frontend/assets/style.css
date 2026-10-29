@@ -257,3 +257,5 @@ table.codes th, table.codes td { border-bottom: 1px solid #2c2c35; padding: 6px 
 .bottom-nav a.on { color: var(--accent); font-weight: 700; background: rgba(255, 122, 26, 0.1); }
 body.has-nav main { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
 body.has-nav .flash { bottom: calc(80px + env(safe-area-inset-bottom)); }
+#voice-toggle { white-space: nowrap; }
+#voice-toggle.on { border-color: var(--ok); color: var(--ok); }

@@ -7,6 +7,6 @@ window.HH_CONFIG = {
   apiMajor: 0, // must match the MAJOR of the backend apiVersion
   envs: {
     test: { apiUrl: 'https://script.google.com/macros/s/AKfycbxP60LR-t69_7eNmoARjXN8PN1Fudp6t3GT3W9mmJL-HvANvuJ5CVYR85H2E75pcSau/exec' },
-    prod: { apiUrl: '' },
+    prod: { apiUrl: 'https://script.google.com/macros/s/AKfycbw82br0xz-Hw_lBWtKBSnZs_GlX5vcD8RSI3uvzLXlN6lJAwXfQ0JtbOG1AJy7eIo8H/exec' },
   },
 };

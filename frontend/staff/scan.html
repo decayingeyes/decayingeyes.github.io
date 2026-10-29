@@ -17,7 +17,7 @@
   <main>
     <div class="scan-top">
       <h1>📷 สแกนเข้า-ออกงาน</h1>
-      <a href="portal.html" class="muted">กลับ</a>
+      <button class="chip" id="voice-toggle" type="button" aria-pressed="true">🔊 เสียงประกาศ: เปิด</button>
     </div>
     <p class="muted" id="who"></p>
 
@@ -110,6 +110,44 @@
           o.start(); o.stop(audio.currentTime + (ok ? 0.12 : 0.35));
         } catch (e) { /* no audio */ }
         if (navigator.vibrate) navigator.vibrate(ok ? 80 : [80, 60, 80]);
+      }
+
+      // ---- voice announcement (Web Speech API, the phone's own Thai voice) ----
+      var voiceOn = HH.storage.get('hh.voice') !== 'off';
+      function renderVoiceToggle() {
+        $('voice-toggle').textContent = voiceOn ? '🔊 เสียงประกาศ: เปิด' : '🔇 เสียงประกาศ: ปิด';
+        $('voice-toggle').setAttribute('aria-pressed', String(voiceOn));
+        $('voice-toggle').classList.toggle('on', voiceOn);
+      }
+      $('voice-toggle').addEventListener('click', function () {
+        voiceOn = !voiceOn;
+        HH.storage.set('hh.voice', voiceOn ? 'on' : 'off');
+        renderVoiceToggle();
+        if (voiceOn) speak('เปิดเสียงประกาศแล้ว');
+      });
+      renderVoiceToggle();
+
+      function thaiVoice() {
+        if (!window.speechSynthesis) return null;
+        var voices = window.speechSynthesis.getVoices();
+        return voices.filter(function (v) { return /^th/i.test(v.lang); })[0] || null;
+      }
+      // Some browsers load the voice list asynchronously.
+      if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = function () { thaiVoice(); };
+      }
+
+      function speak(text) {
+        if (!voiceOn || !window.speechSynthesis) return;
+        try {
+          window.speechSynthesis.cancel(); // never queue up behind an older announcement
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = 'th-TH';
+          var v = thaiVoice();
+          if (v) u.voice = v;
+          u.rate = 1.05;
+          window.speechSynthesis.speak(u);
+        } catch (e) { /* speech not available: the on-screen message is enough */ }
       }
 
       function flash(text, kind, ms) {
@@ -222,6 +260,9 @@
           if (!res.ok) { beep(false); flash(HH.errorText(res), 'bad', 3000); closeResult(); return; }
           var d = res.data;
           beep(true);
+          speak(d.action === 'IN'
+            ? 'ยืนยันการเข้างานของ ' + d.nickname
+            : 'ยืนยันการออกงานของ ' + d.nickname + (d.countedHours ? ' นับ ' + d.countedHours + ' ชั่วโมง' : ''));
           flash(d.action === 'IN'
             ? '✅ ' + d.nickname + ' เข้างาน ' + d.time
             : '👋 ' + d.nickname + ' ออกงาน ' + d.time + ' · นับ ' + d.countedHours + ' ชม.', d.action === 'IN' ? 'ok' : 'out', 2000);

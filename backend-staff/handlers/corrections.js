@@ -96,6 +96,9 @@ function handleCorrectionPropose_(payload, ctx) {
     });
     var session = HHCorrections.pickSession(day, payload.sessionId);
     if (payload.sessionId && !session) throw new HHErrors.AppError('NOT_FOUND', 'ไม่พบรอบเข้างานที่เลือก');
+    var mine = HHSheets.readAll('WorkSessions').filter(function (s) { return String(s.StudentID) === sid; });
+    var clash = HHCorrections.overlapProblem(mine, session ? session.SessionID : '', inT, outT, new Date(), HHHours.bangkokTime);
+    if (clash) throw new HHErrors.AppError('VALIDATION', clash);
     var reportId = '';
     if (payload.reportId) {
       var rep = HHRepo.findBy('Reports', 'ReportID', String(payload.reportId));
@@ -162,11 +165,13 @@ function reviewCorrection_(payload, ctx, approve) {
     var problem = HHCorrections.reviewProblem(ctx.actor, c.data, unitRows_('Periods', c.data.UnitID));
     if (problem) throw new HHErrors.AppError('FORBIDDEN', problem);
     var d = c.data;
+    var result = { correctionId: String(d.CorrectionID), status: approve ? 'APPROVED' : 'REJECTED' };
+    // Apply first: it validates (e.g. overlaps) before writing. Sheets has no
+    // rollback, so the request is marked APPROVED only after the hours are written.
+    if (approve) result.countedHours = applyCorrection_(d, cfg);
     HHRepo.update('Corrections', c.row, {
       Status: approve ? 'APPROVED' : 'REJECTED', ReviewedBy: ctx.actor.studentId, ReviewedAt: now, ReviewNote: note,
     });
-    var result = { correctionId: String(d.CorrectionID), status: approve ? 'APPROVED' : 'REJECTED' };
-    if (approve) result.countedHours = applyCorrection_(d, cfg);
     HHLog.append({
       unitId: d.UnitID, studentId: d.TargetStudentID, action: approve ? 'CORRECTION' : 'REJECT', actorId: ctx.actor.studentId,
       method: 'ADMIN', flags: [String(d.Type || 'CORRECTION')], reason: String(d.Reason),
@@ -182,6 +187,9 @@ function applyCorrection_(d, cfg) {
   var inT = new Date(d.ProposedIn), outT = new Date(d.ProposedOut);
   var sid = String(d.TargetStudentID);
   var existing = d.SessionID ? HHRepo.findBy('WorkSessions', 'SessionID', String(d.SessionID)) : null;
+  var mine = HHSheets.readAll('WorkSessions').filter(function (s) { return String(s.StudentID) === sid; });
+  var clash = HHCorrections.overlapProblem(mine, d.SessionID || '', inT, outT, new Date(), HHHours.bangkokTime);
+  if (clash) throw new HHErrors.AppError('VALIDATION', clash);
   var already = countedOnDate_(sid, String(d.WorkDate), existing ? String(existing.data.SessionID) : null);
   var c = HHHours.countedHours(inT, outT, already, cfg);
   if (existing) {

@@ -27,3 +27,4 @@
 - **Positions are assigned only by admins** (decision 2026-10-30): web roster imports ignore the Role column (new people join as `member`, existing roles are kept); roles change only via `role.set`. Unit admins assign up to `head` in their unit; creating or changing admins is for super admins. Nobody changes their own role. Sheet-menu import (owner) and TEST seed may still set roles.
 - New action `roster.list` (admin member list). New log action `ROLE_SET`.
 - Role/status changes apply immediately (per-member cache epoch) instead of after up to 10 minutes.
+- Corrections may not overlap another session of the same member (checked on propose and again on approve); approval writes the hours before marking the request APPROVED.

@@ -87,3 +87,22 @@ test('period validation', () => {
   assert.ok(C.periodProblem('2026-11-01', '2026-10-31'));
   assert.equal(C.periodProblem('2026-10-30', '2026-10-31'), null);
 });
+
+test('overlap: corrected time may not cover another session of the same member', () => {
+  const H = require('../../backend-staff/core/hours');
+  const now = bkk('2026-10-29T23:50:00');
+  const mine = [
+    { SessionID: 'a', In: bkk('2026-10-29T20:08:00'), Status: 'NEEDS_REVIEW' },
+    { SessionID: 'b', In: bkk('2026-10-29T20:53:00'), Out: bkk('2026-10-29T20:54:00'), Status: 'COMPLETE' },
+    { SessionID: 'c', In: bkk('2026-10-29T23:38:00'), Status: 'OPEN' },
+  ];
+  // The real case: fixing 'a' to 20:08-21:40 overlaps 'b'.
+  assert.match(C.overlapProblem(mine, 'a', bkk('2026-10-29T20:08:00'), bkk('2026-10-29T21:40:00'), now, H.bangkokTime), /20:53/);
+  assert.equal(C.overlapProblem(mine, 'a', bkk('2026-10-29T20:08:00'), bkk('2026-10-29T20:50:00'), now, H.bangkokTime), null);
+  // touching edges is fine
+  assert.equal(C.overlapProblem(mine, 'a', bkk('2026-10-29T20:08:00'), bkk('2026-10-29T20:53:00'), now, H.bangkokTime), null);
+  // an open session runs until now
+  assert.ok(C.overlapProblem(mine, '', bkk('2026-10-29T23:00:00'), bkk('2026-10-29T23:45:00'), now, H.bangkokTime));
+  // a forgotten checkout (no end time) does not block a new session
+  assert.equal(C.overlapProblem(mine, '', bkk('2026-10-29T21:00:00'), bkk('2026-10-29T22:00:00'), now, H.bangkokTime), null);
+});

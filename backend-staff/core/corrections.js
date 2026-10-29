@@ -80,6 +80,27 @@ var HHCorrections = (function () {
     return daySessions.slice().sort(function (a, b) { return new Date(a.In) - new Date(b.In); })[daySessions.length - 1];
   }
 
+  /**
+   * A corrected/new session must not overlap the member's other sessions,
+   * or the same time would be counted twice. Open sessions count as running
+   * until `now`.
+   * @param {Object[]} memberSessions all of the member's sessions
+   * @param {string} targetSessionId session being corrected ('' for a new one)
+   * @return {string|null}
+   */
+  function overlapProblem(memberSessions, targetSessionId, inTime, outTime, now, fmtTime) {
+    var clash = memberSessions.filter(function (s) {
+      if (targetSessionId && String(s.SessionID) === String(targetSessionId)) return false;
+      if (s.Status === 'NEEDS_REVIEW' && !s.Out) return false; // forgotten checkout: no real end time
+      var a = new Date(s.In);
+      var b = s.Out ? new Date(s.Out) : now;
+      return a < outTime && inTime < b;
+    })[0];
+    if (!clash) return null;
+    return 'ช่วงเวลานี้ทับกับรอบอื่น (เข้า ' + fmtTime(new Date(clash.In)) +
+      (clash.Out ? ' ออก ' + fmtTime(new Date(clash.Out)) : ' ยังอยู่ในงาน') + ') — แก้ให้ไม่ทับกันก่อน';
+  }
+
   /** Short text of a session's original values, kept in Note when corrected. */
   function originalNote(s, fmtTime) {
     return 'เดิม: ' + fmtTime(new Date(s.In)) + '–' + (s.Out ? fmtTime(new Date(s.Out)) : '?') +
@@ -148,6 +169,7 @@ var HHCorrections = (function () {
     timesProblem: timesProblem,
     reviewProblem: reviewProblem,
     pickSession: pickSession,
+    overlapProblem: overlapProblem,
     originalNote: originalNote,
     isSelfSession: isSelfSession,
     exportRows: exportRows,

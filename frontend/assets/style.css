@@ -125,3 +125,27 @@ form .btn { margin-top: 20px; }
   padding: 8px 10px; font: inherit; font-size: 0.85rem; cursor: pointer;
 }
 .pw-warn { margin: 6px 0 0; font-size: 0.9rem; }
+
+/* scan page */
+.scan-top { display: flex; justify-content: space-between; align-items: baseline; }
+.camera-box { background: #000; border-radius: var(--radius); overflow: hidden; margin: 12px 0; min-height: 80px; }
+.camera-box .btn { border-radius: 0; }
+#reader video { width: 100% !important; display: block; }
+.result { text-align: center; }
+.result .r-nick { font-size: clamp(2.6rem, 14vw, 4rem); font-weight: 700; line-height: 1.1; }
+.result .r-band { margin: 10px -16px; padding: 8px; color: #fff; font-weight: 700; }
+.result .r-state { margin: 8px 0; }
+.result .btn { margin-top: 10px; }
+.btn.big { padding: 22px; font-size: 1.2rem; }
+.btn.in { background: var(--ok); color: #fff; }
+.btn.out { background: #2f80ed; color: #fff; }
+.flash { position: fixed; left: 16px; right: 16px; bottom: 24px; z-index: 150; padding: 18px; border-radius: var(--radius);
+  font-size: 1.15rem; font-weight: 700; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+.flash.ok { background: var(--ok); color: #fff; }
+.flash.out { background: #2f80ed; color: #fff; }
+.flash.bad { background: var(--bad); color: #fff; }
+.flash.warn { background: var(--warn); color: #111; }
+.flash.muted { background: var(--surface); color: var(--text); }
+.manual { display: flex; gap: 8px; }
+.manual .btn { width: auto; white-space: nowrap; }
+.small { font-size: 0.85rem; }

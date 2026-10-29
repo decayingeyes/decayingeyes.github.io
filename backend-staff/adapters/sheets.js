@@ -77,6 +77,9 @@ var HHSheets = (function () {
       } else {
         problems = problems.concat(HHSchema.compareHeaders(name, headerRow(sh)));
       }
+      HHSchema.textColumnIndexes(name).forEach(function (col) {
+        sh.getRange(2, col, sh.getMaxRows() - 1, 1).setNumberFormat('@');
+      });
     });
     removeDefaultSheet_(book, created);
     clearSchemaCache();

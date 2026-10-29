@@ -14,6 +14,7 @@
 </head>
 <body>
   <main>
+    <a class="btn no-print" id="to-scan" href="scan.html" hidden style="margin-bottom:16px">📷 สแกนเข้า-ออกงานให้สมาชิก</a>
     <p class="msg" id="msg">กำลังโหลดบัตร…</p>
 
     <div class="member-card" id="card" hidden>
@@ -54,6 +55,7 @@
         }
         card = res.data;
         HHCard.renderHtml(card);
+        document.getElementById('to-scan').hidden = card.role === 'member';
         msg.hidden = true;
         document.getElementById('card').hidden = false;
         document.getElementById('actions').hidden = false;

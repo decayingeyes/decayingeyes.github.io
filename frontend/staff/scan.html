@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>สแกนเข้า-ออกงาน — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main>
+    <div class="scan-top">
+      <h1>📷 สแกนเข้า-ออกงาน</h1>
+      <a href="portal.html" class="muted">กลับ</a>
+    </div>
+    <p class="muted" id="who"></p>
+
+    <div id="inapp" class="card warn" hidden>
+      <p><b>กรุณาเปิดใน Safari หรือ Chrome</b><br>เบราว์เซอร์ในแอป (LINE/Instagram/Facebook) ใช้กล้องไม่ได้</p>
+      <button class="btn secondary" id="copy">คัดลอกลิงก์</button>
+    </div>
+
+    <!-- camera -->
+    <div id="camera-box" class="camera-box">
+      <div id="reader"></div>
+      <button class="btn" id="start">เริ่มสแกน</button>
+    </div>
+
+    <!-- result -->
+    <div id="result" class="card result" hidden>
+      <div class="r-nick" id="r-nick"></div>
+      <div id="r-name"></div>
+      <div class="muted" id="r-sid"></div>
+      <div class="r-band" id="r-band"></div>
+      <div class="r-state" id="r-state"></div>
+      <div id="r-warn" class="warn"></div>
+      <div id="reason-box" hidden>
+        <label for="reason">เหตุผล (จำเป็น)</label>
+        <input id="reason" maxlength="300" placeholder="เช่น หัวหน้าทีมยังไม่มา">
+      </div>
+      <button class="btn big" id="confirm"></button>
+      <button class="btn secondary" id="cancel">ยกเลิก</button>
+    </div>
+
+    <!-- flash after confirm / error -->
+    <div id="flash" class="flash" hidden></div>
+
+    <h2>พิมพ์รหัสเอง</h2>
+    <form id="manual" class="manual">
+      <input id="manual-id" inputmode="numeric" placeholder="รหัสนักศึกษา หรือยิงเครื่องสแกน" autocomplete="off">
+      <button class="btn secondary" type="submit">ค้นหา</button>
+    </form>
+    <p class="muted small">ใช้เมื่อกล้องใช้ไม่ได้ (จะถูกบันทึกว่าพิมพ์เอง) · เครื่องสแกน USB/Bluetooth ยิงใส่ช่องนี้ได้เลย</p>
+  </main>
+
+  <script>
+    (function () {
+      if (!HH.requireLogin()) return;
+      var $ = function (id) { return document.getElementById(id); };
+      var scanner = null;
+      var current = null; // lookup result being shown
+      var busy = false;
+
+      // In-app browsers cannot open the camera on iOS.
+      if (/Line\/|FBAN|FBAV|Instagram/i.test(navigator.userAgent)) {
+        $('inapp').hidden = false;
+        $('camera-box').hidden = true;
+      }
+      $('copy').addEventListener('click', function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(location.href);
+        $('copy').textContent = 'คัดลอกแล้ว';
+      });
+
+      HH.call('auth.me').then(function (res) {
+        if (!res.ok) { if (res.error.code === 'UNAUTHENTICATED') HH.requireLogin(); return; }
+        var p = res.data.profile;
+        if (p.role === 'member') {
+          $('who').textContent = 'บัญชีนี้ไม่มีสิทธิ์สแกน (ต้องเป็นหัวหน้า/รองหัวหน้า/แอดมิน)';
+          $('who').className = 'bad';
+          $('camera-box').hidden = true;
+          $('manual').hidden = true;
+          return;
+        }
+        $('who').textContent = 'ผู้สแกน: ' + p.nickname + ' (' + p.teamName + ')';
+      });
+
+      // ---- feedback ----
+      var audio = null;
+      function beep(ok) {
+        try {
+          audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+          var o = audio.createOscillator();
+          var g = audio.createGain();
+          o.frequency.value = ok ? 1200 : 300;
+          g.gain.value = 0.15;
+          o.connect(g); g.connect(audio.destination);
+          o.start(); o.stop(audio.currentTime + (ok ? 0.12 : 0.35));
+        } catch (e) { /* no audio */ }
+        if (navigator.vibrate) navigator.vibrate(ok ? 80 : [80, 60, 80]);
+      }
+
+      function flash(text, kind, ms) {
+        var f = $('flash');
+        f.className = 'flash ' + kind;
+        f.textContent = text;
+        f.hidden = false;
+        clearTimeout(flash.t);
+        flash.t = setTimeout(function () { f.hidden = true; }, ms || 1800);
+      }
+
+      // ---- camera ----
+      function startCamera() {
+        $('start').hidden = true;
+        scanner = scanner || new Html5Qrcode('reader', {
+          formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          verbose: false,
+        });
+        var w = Math.min(window.innerWidth - 40, 480);
+        scanner.start({ facingMode: 'environment' },
+          { fps: 12, qrbox: { width: w * 0.9, height: Math.round(w * 0.4) }, aspectRatio: 1.333 },
+          onDecoded, function () {}
+        ).catch(function () {
+          $('start').hidden = false;
+          flash('เปิดกล้องไม่ได้ — อนุญาตการใช้กล้อง หรือใช้ช่องพิมพ์รหัสด้านล่าง', 'bad', 4000);
+        });
+      }
+
+      function pauseCamera() {
+        try { if (scanner && scanner.getState() === Html5QrcodeScannerState.SCANNING) scanner.pause(true); } catch (e) {}
+      }
+      function resumeCamera() {
+        try { if (scanner && scanner.getState() === Html5QrcodeScannerState.PAUSED) scanner.resume(); } catch (e) {}
+      }
+
+      $('start').addEventListener('click', startCamera);
+
+      function onDecoded(text) {
+        if (busy || current) return;
+        beep(true);
+        pauseCamera();
+        lookup({ code: text });
+      }
+
+      // ---- lookup / confirm ----
+      var STATE_TEXT = { IN: 'อยู่ในงาน', OUT: 'ยังไม่ได้เข้างาน' };
+
+      function lookup(payload) {
+        busy = true;
+        flash('กำลังตรวจสอบ…', 'muted', 8000);
+        HH.call('scan.lookup', payload).then(function (res) {
+          busy = false;
+          $('flash').hidden = true;
+          if (!res.ok) {
+            beep(false);
+            flash(HH.errorText(res), res.error.code === 'DUPLICATE_SCAN' ? 'warn' : 'bad', 2500);
+            setTimeout(resumeCamera, 1200);
+            return;
+          }
+          showResult(res.data);
+        });
+      }
+
+      function showResult(d) {
+        current = d;
+        var m = d.member;
+        $('r-nick').textContent = m.nickname;
+        $('r-name').textContent = m.fullName;
+        $('r-sid').textContent = m.studentId;
+        $('r-band').textContent = m.deptName + ' · ' + m.teamName;
+        $('r-band').style.background = m.deptColor;
+        $('r-state').textContent = 'สถานะ: ' + STATE_TEXT[m.state] + (d.since ? ' (เข้า ' + d.since + ')' : '');
+        $('r-warn').textContent = d.warnings.join(' · ');
+        $('reason-box').hidden = !d.requiresReason;
+        $('reason').value = '';
+        var btn = $('confirm');
+        btn.className = 'btn big ' + (d.action === 'IN' ? 'in' : 'out');
+        btn.textContent = d.action === 'IN'
+          ? 'ยืนยันเข้างาน'
+          : 'ยืนยันออกงาน (นับ ' + d.previewHours + ' ชม.)';
+        $('result').hidden = false;
+        if (d.requiresReason) $('reason').focus();
+      }
+
+      function closeResult() {
+        current = null;
+        $('result').hidden = true;
+        resumeCamera();
+      }
+
+      $('cancel').addEventListener('click', closeResult);
+
+      $('confirm').addEventListener('click', function () {
+        if (!current || busy) return;
+        var reason = $('reason').value.trim();
+        if (current.requiresReason && !reason) { flash('กรุณาระบุเหตุผล', 'bad'); return; }
+        busy = true;
+        HH.busy($('confirm'), true, 'กำลังบันทึก…');
+        HH.call('scan.confirm', { lookupToken: current.lookupToken, reason: reason }).then(function (res) {
+          busy = false;
+          HH.busy($('confirm'), false);
+          if (!res.ok) { beep(false); flash(HH.errorText(res), 'bad', 3000); closeResult(); return; }
+          var d = res.data;
+          beep(true);
+          flash(d.action === 'IN'
+            ? '✅ ' + d.nickname + ' เข้างาน ' + d.time
+            : '👋 ' + d.nickname + ' ออกงาน ' + d.time + ' · นับ ' + d.countedHours + ' ชม.', d.action === 'IN' ? 'ok' : 'out', 2000);
+          closeResult();
+        });
+      });
+
+      // Manual entry and keyboard-wedge scanners (they type the code and press Enter).
+      $('manual').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = $('manual-id').value.trim();
+        if (!v || busy) return;
+        $('manual-id').value = '';
+        pauseCamera();
+        lookup(v.indexOf('-') !== -1 ? { code: v } : { studentId: v });
+      });
+    })();
+  </script>
+</body>
+</html>

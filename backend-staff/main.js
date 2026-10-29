@@ -15,6 +15,8 @@ function handlers_() {
     'auth.logout': handleAuthLogout_,
     'auth.me': handleAuthMe_,
     'me.card': handleMeCard_,
+    'scan.lookup': handleScanLookup_,
+    'scan.confirm': handleScanConfirm_,
     'team.activationCode.issue': handleTeamActivationCodeIssue_,
     'roster.import': handleRosterImport_,
   };

@@ -36,6 +36,21 @@ var HHSchema = (function () {
     Errors: ['Timestamp', 'Env', 'RequestId', 'Action', 'StudentID', 'Code', 'Message', 'Stack'],
   };
 
+  /**
+   * Columns stored as plain text so Sheets does not auto-convert them
+   * (leading zeros in student ids, "2026-10-31" turning into a Date).
+   */
+  var TEXT_COLUMNS = ['StudentID', 'TargetStudentID', 'ActorID', 'ScannedInBy', 'ScannedOutBy', 'ProposedBy',
+    'ReviewedBy', 'ResolvedBy', 'GrantedBy', 'ClosedBy', 'WorkDate', 'Date', 'StartDate', 'EndDate',
+    'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value'];
+
+  function textColumnIndexes(sheetName) {
+    var h = SHEETS[sheetName] || [];
+    var out = [];
+    h.forEach(function (name, i) { if (TEXT_COLUMNS.indexOf(name) !== -1) out.push(i + 1); });
+    return out;
+  }
+
   function sheetNames() {
     return Object.keys(SHEETS);
   }
@@ -64,6 +79,8 @@ var HHSchema = (function () {
 
   return {
     SHEETS: SHEETS,
+    TEXT_COLUMNS: TEXT_COLUMNS,
+    textColumnIndexes: textColumnIndexes,
     sheetNames: sheetNames,
     headers: headers,
     compareHeaders: compareHeaders,

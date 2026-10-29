@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>เปิดใช้งานบัญชี — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main>
+    <h1>🎃 เปิดใช้งานบัญชี</h1>
+    <p class="muted">ใช้รหัสเปิดใช้งาน 6 ตัวที่ได้จากหัวหน้าทีม แล้วตั้งรหัสผ่านของตัวเอง
+      (ใช้ทำได้ทั้งครั้งแรก และตอนลืมรหัสผ่าน)</p>
+    <form id="form" autocomplete="off">
+      <label for="sid">รหัสนักศึกษา</label>
+      <input id="sid" name="username" inputmode="numeric" autocomplete="username" required>
+      <label for="code">รหัสเปิดใช้งาน (6 ตัว)</label>
+      <input id="code" autocapitalize="characters" autocomplete="one-time-code" maxlength="8" required>
+      <label for="pw">ตั้งรหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)</label>
+      <input id="pw" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="pw2">ยืนยันรหัสผ่านอีกครั้ง</label>
+      <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn" id="submit" type="submit">เปิดใช้งาน</button>
+      <p class="msg" id="msg"></p>
+    </form>
+    <div class="links"><p><a href="login.html">มีรหัสผ่านแล้ว? เข้าสู่ระบบ</a></p></div>
+  </main>
+  <script>
+    (function () {
+      var form = document.getElementById('form');
+      var btn = document.getElementById('submit');
+      var msg = document.getElementById('msg');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var pw = document.getElementById('pw').value;
+        if (pw !== document.getElementById('pw2').value) {
+          HH.say(msg, 'รหัสผ่านสองช่องไม่ตรงกัน', 'bad');
+          return;
+        }
+        HH.busy(btn, true, 'กำลังเปิดใช้งาน…');
+        HH.say(msg, '');
+        HH.call('auth.activate', {
+          studentId: document.getElementById('sid').value,
+          code: document.getElementById('code').value,
+          password: pw,
+          userAgent: navigator.userAgent,
+        }).then(function (res) {
+          HH.busy(btn, false);
+          if (!res.ok) { HH.say(msg, HH.errorText(res), 'bad'); return; }
+          HH.token.set(res.data.token);
+          window.location.replace('portal.html');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

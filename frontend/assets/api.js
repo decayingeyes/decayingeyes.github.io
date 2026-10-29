@@ -75,11 +75,45 @@
 
   document.addEventListener('DOMContentLoaded', showTestBanner);
 
+  /** Path prefix back to the site root, so pages in staff/ can link to ../ */
+  function rootPath() {
+    return window.location.pathname.indexOf('/staff/') !== -1 ? '../' : './';
+  }
+
+  /** Redirect to login when there is no token. Returns false if redirected. */
+  function requireLogin() {
+    if (storage.get(tokenKey)) return true;
+    window.location.replace(rootPath() + 'staff/login.html');
+    return false;
+  }
+
+  /** Show a Thai message in an element; kind = 'bad' | 'ok' | 'muted'. */
+  function say(el, text, kind) {
+    el.className = kind || 'muted';
+    el.textContent = text;
+  }
+
+  /** Disable a button while a call is in flight. */
+  function busy(button, isBusy, label) {
+    if (isBusy) {
+      button.dataset.label = button.textContent;
+      button.textContent = label || 'กำลังดำเนินการ…';
+      button.disabled = true;
+    } else {
+      button.textContent = button.dataset.label || button.textContent;
+      button.disabled = false;
+    }
+  }
+
   window.HH = {
     env: env,
     call: call,
     errorText: errorText,
     storage: storage,
+    requireLogin: requireLogin,
+    rootPath: rootPath,
+    say: say,
+    busy: busy,
     token: {
       get: function () { return storage.get(tokenKey); },
       set: function (t) { storage.set(tokenKey, t); },

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>บัตรของฉัน — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+  <script src="../assets/card.js"></script>
+</head>
+<body>
+  <main>
+    <p class="msg" id="msg">กำลังโหลดบัตร…</p>
+
+    <div class="member-card" id="card" hidden>
+      <div class="event" id="c-event"></div>
+      <div class="nickname" id="c-nick"></div>
+      <div class="fullname" id="c-name"></div>
+      <div class="sid" id="c-sid"></div>
+      <div class="band" id="c-band"></div>
+      <div class="barcode-area"><svg id="c-barcode"></svg></div>
+      <div class="hint">เปิดความสว่างหน้าจอให้สูงสุดก่อนสแกน</div>
+    </div>
+
+    <div class="stack no-print" id="actions" hidden style="margin-top:16px">
+      <button class="btn" id="save">บันทึกบัตรเป็นรูป</button>
+      <button class="btn secondary" id="print">พิมพ์บัตร</button>
+      <button class="btn secondary" id="logout">ออกจากระบบ</button>
+    </div>
+  </main>
+
+  <div class="overlay no-print" id="overlay">
+    <img id="png" alt="บัตรสตาฟ">
+    <p>กดค้างที่รูป แล้วเลือก <b>"บันทึกลงในรูปภาพ"</b></p>
+    <a class="btn" id="download" download="staff-card.png">ดาวน์โหลดรูป</a>
+    <button class="btn secondary" id="close">ปิด</button>
+  </div>
+
+  <script>
+    (function () {
+      if (!HH.requireLogin()) return;
+      var msg = document.getElementById('msg');
+      var card = null;
+
+      HH.call('me.card').then(function (res) {
+        if (!res.ok) {
+          if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return; }
+          HH.say(msg, HH.errorText(res), 'bad');
+          return;
+        }
+        card = res.data;
+        HHCard.renderHtml(card);
+        msg.hidden = true;
+        document.getElementById('card').hidden = false;
+        document.getElementById('actions').hidden = false;
+      });
+
+      document.getElementById('save').addEventListener('click', function () {
+        HHCard.toPng(card).then(function (url) {
+          document.getElementById('png').src = url;
+          document.getElementById('download').href = url;
+          document.getElementById('download').download = 'staff-card-' + card.studentId + '.png';
+          document.getElementById('overlay').classList.add('open');
+        });
+      });
+      document.getElementById('close').addEventListener('click', function () {
+        document.getElementById('overlay').classList.remove('open');
+      });
+      document.getElementById('print').addEventListener('click', function () { window.print(); });
+      document.getElementById('logout').addEventListener('click', function () {
+        HH.call('auth.logout').then(function () {
+          HH.token.clear();
+          window.location.replace('login.html');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

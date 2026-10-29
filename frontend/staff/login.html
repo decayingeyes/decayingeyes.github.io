@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>เข้าสู่ระบบ — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main>
+    <h1>🎃 เข้าสู่ระบบ</h1>
+    <form id="form" autocomplete="on">
+      <label for="sid">รหัสนักศึกษา</label>
+      <input id="sid" name="username" inputmode="numeric" autocomplete="username" required>
+      <label for="pw">รหัสผ่าน</label>
+      <input id="pw" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn" id="submit" type="submit">เข้าสู่ระบบ</button>
+      <p class="msg" id="msg"></p>
+    </form>
+    <div class="links">
+      <p><a href="activate.html">ยังไม่มีรหัสผ่าน? เปิดใช้งานบัญชีครั้งแรก</a></p>
+      <p class="muted">ลืมรหัสผ่าน: ขอรหัสเปิดใช้งานใหม่จากหัวหน้าทีม แล้วไปที่หน้าเปิดใช้งาน</p>
+    </div>
+  </main>
+  <script>
+    (function () {
+      if (HH.token.get()) { window.location.replace('portal.html'); return; }
+      var form = document.getElementById('form');
+      var btn = document.getElementById('submit');
+      var msg = document.getElementById('msg');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        HH.busy(btn, true, 'กำลังเข้าสู่ระบบ…');
+        HH.say(msg, '');
+        HH.call('auth.login', {
+          studentId: document.getElementById('sid').value,
+          password: document.getElementById('pw').value,
+          userAgent: navigator.userAgent,
+        }).then(function (res) {
+          HH.busy(btn, false);
+          if (!res.ok) { HH.say(msg, HH.errorText(res), 'bad'); return; }
+          HH.token.set(res.data.token);
+          window.location.replace('portal.html');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

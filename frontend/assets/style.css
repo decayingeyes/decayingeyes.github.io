@@ -76,3 +76,43 @@ dl.kv dd { margin: 0; word-break: break-all; }
   font-weight: 700;
   padding: 6px;
 }
+
+/* forms */
+label { display: block; margin: 14px 0 6px; color: var(--muted); font-size: 0.95rem; }
+input {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #33333d;
+  border-radius: 10px;
+  background: #121217;
+  color: var(--text);
+  font: inherit;
+  font-size: 18px; /* >= 16px stops iOS zooming into inputs */
+}
+input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+form .btn { margin-top: 20px; }
+.msg { min-height: 1.5em; margin-top: 12px; }
+.links { margin-top: 24px; text-align: center; }
+.links a { color: var(--accent); }
+
+/* member card (spec 5.5) */
+.member-card { background: var(--surface); border-radius: 20px; overflow: hidden; text-align: center; }
+.member-card .event { padding: 16px 16px 0; color: var(--muted); font-weight: 700; letter-spacing: 0.02em; }
+.member-card .nickname { font-size: clamp(3rem, 18vw, 5rem); font-weight: 700; line-height: 1.1; padding: 8px 12px 0; }
+.member-card .fullname { font-size: 1.15rem; }
+.member-card .sid { color: var(--muted); margin-bottom: 14px; }
+.member-card .band { padding: 10px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.member-card .barcode-area { background: #fff; padding: 20px 16px 12px; }
+.member-card .barcode-area svg { width: 100%; height: auto; display: block; }
+.member-card .hint { color: var(--muted); font-size: 0.9rem; padding: 10px 16px 14px; }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 16px; gap: 12px; }
+.overlay.open { display: flex; }
+.overlay img { max-width: 100%; max-height: 70vh; border-radius: 12px; }
+
+@media print {
+  body { background: #fff; color: #000; }
+  .no-print, .test-banner { display: none !important; }
+  .member-card { background: #fff; color: #000; border: 1px solid #000; max-width: 9cm; margin: 0 auto; }
+  .member-card .event, .member-card .sid, .member-card .hint { color: #000; }
+}

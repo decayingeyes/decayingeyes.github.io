@@ -16,6 +16,8 @@ function onOpen() {
     .addItem('สร้างข้อมูลตัวอย่าง (เฉพาะ TEST)', 'menuSeedTest')
     .addItem('ทดลองปิดรายการลืมสแกนออก (เฉพาะ TEST)', 'menuTestAutoClose')
     .addSeparator()
+    .addItem('ล้างประวัติการเข้างานทั้งหมด (สำรองไว้ก่อน)', 'menuClearAttendance')
+    .addSeparator()
     .addItem('ตรวจสอบโครงสร้างชีต', 'menuValidateSchema')
     .addItem('ดูสถานะระบบ', 'menuShowStatus')
     .addToUi();
@@ -144,6 +146,52 @@ function menuTestAutoClose() {
 function menuRefreshSummary() {
   HHSummarySheets.refresh();
   SpreadsheetApp.getUi().alert('อัปเดตแท็บ "' + HHSummarySheets.TODAY_SHEET + '" และ "' + HHSummarySheets.MATRIX_SHEET + '" แล้ว');
+}
+
+/** Attendance history; members, passwords, photos, config and Log stay. */
+var ATTENDANCE_SHEETS = ['WorkSessions', 'Corrections', 'Reports', 'Alerts', 'Periods', 'DashboardCache'];
+
+/**
+ * Fresh start after test runs: each history sheet is copied to a hidden
+ * "สำรอง …" sheet first, then its data rows are cleared and everyone is set OUT.
+ */
+function menuClearAttendance() {
+  var ui = SpreadsheetApp.getUi();
+  var ok = ui.alert('ล้างประวัติการเข้างานทั้งหมด?',
+    'ลบ: รอบเข้า-ออกงาน, คำขอแก้เวลา, แจ้งปัญหา, แจ้งเตือน, งวดที่ปิด\n' +
+    'เก็บไว้: รายชื่อสมาชิก รหัสผ่าน รูปบัตร การตั้งค่า และ Log\n' +
+    'ข้อมูลเดิมจะถูกสำรองเป็นแท็บซ่อน "สำรอง …" ก่อนลบ', ui.ButtonSet.YES_NO);
+  if (ok !== ui.Button.YES) return;
+  var result = clearAttendance_();
+  ui.alert('ล้างแล้ว: ' + result.cleared + ' แถว\nสำรองไว้ที่แท็บซ่อน: ' + result.backups.join(', '));
+}
+
+function clearAttendance_() {
+  return HHLock.withLock(function () {
+    var book = SpreadsheetApp.getActiveSpreadsheet();
+    var stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HHmm');
+    var cleared = 0, backups = [];
+    ATTENDANCE_SHEETS.forEach(function (name) {
+      var sh = book.getSheetByName(name);
+      if (!sh || sh.getLastRow() < 2) return;
+      var copy = sh.copyTo(book).setName('สำรอง ' + name + ' ' + stamp);
+      copy.hideSheet();
+      backups.push(copy.getName());
+      var rows = sh.getLastRow() - 1;
+      sh.getRange(2, 1, rows, sh.getLastColumn()).clearContent();
+      cleared += rows;
+    });
+    var members = HHRepo.all('Members');
+    members.forEach(function (m) {
+      if (String(m.data.CurrentState) !== 'OUT' || String(m.data.OpenSessionID) !== '') {
+        HHRepo.update('Members', m.row, { CurrentState: 'OUT', OpenSessionID: '' });
+      }
+    });
+    HHLog.append({ requestId: HHIds.newRequestId(), action: 'CLEAR_ATTENDANCE', actorId: 'OWNER', method: 'ADMIN',
+      note: 'cleared ' + cleared + ' rows; backups: ' + backups.join(', ') });
+    HHSummarySheets.refresh();
+    return { cleared: cleared, backups: backups };
+  });
 }
 
 function menuValidateSchema() {

@@ -56,12 +56,14 @@
     <!-- flash after confirm / error -->
     <div id="flash" class="flash" hidden></div>
 
+    <section id="manual-box">
     <h2>พิมพ์รหัสเอง</h2>
     <form id="manual" class="manual">
       <input id="manual-id" inputmode="numeric" placeholder="รหัสนักศึกษา หรือยิงเครื่องสแกน" autocomplete="off">
       <button class="btn secondary" type="submit">ค้นหา</button>
     </form>
     <p class="muted small">ใช้เมื่อกล้องใช้ไม่ได้ (จะถูกบันทึกว่าพิมพ์เอง) · เครื่องสแกน USB/Bluetooth ยิงใส่ช่องนี้ได้เลย</p>
+    </section>
   </main>
 
   <script>
@@ -89,7 +91,7 @@
           $('who').textContent = 'บัญชีนี้ไม่มีสิทธิ์สแกน (ต้องเป็นหัวหน้า/รองหัวหน้า/แอดมิน)';
           $('who').className = 'bad';
           $('camera-box').hidden = true;
-          $('manual').hidden = true;
+          $('manual-box').hidden = true;
           return;
         }
         $('who').textContent = 'ผู้สแกน: ' + p.nickname + ' (' + p.teamName + ')';

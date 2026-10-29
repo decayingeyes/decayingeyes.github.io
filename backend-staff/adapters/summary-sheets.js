@@ -63,7 +63,7 @@ var HHSummarySheets = (function () {
     sh.getRange(4, 1, 1, header.length).setValues([header]).setFontWeight('bold').setBackground('#2b2b33').setFontColor('#ffffff');
     if (t.rows.length > 0) {
       var body = sh.getRange(5, 1, t.rows.length, header.length);
-      body.setNumberFormat('@').setValues(t.rows.map(function (r) { return r.map(String); }));
+      body.setNumberFormat('@').setValues(t.rows.map(function (r) { return r.map(function (v) { return HHSheets.safe(String(v)); }); }));
       body.setBackgrounds(t.states.map(function (s) { return header.map(function () { return STATE_BG[s]; }); }));
     }
     sh.setFrozenRows(4);
@@ -82,7 +82,7 @@ var HHSummarySheets = (function () {
       .setFontWeight('bold').setBackground('#2b2b33').setFontColor('#ffffff');
     if (mx.rows.length > 0) {
       var r2 = sh2.getRange(5, 1, mx.rows.length, mx.header.length);
-      r2.setNumberFormat('@').setValues(mx.rows.map(function (r) { return r.map(String); })).setVerticalAlignment('top').setWrap(true);
+      r2.setNumberFormat('@').setValues(mx.rows.map(function (r) { return r.map(function (v) { return HHSheets.safe(String(v)); }); })).setVerticalAlignment('top').setWrap(true);
       r2.setBackgrounds(mx.rows.map(function (r) {
         return r.map(function (v, i) {
           var isDate = i >= 4 && i < 4 + dates.length;

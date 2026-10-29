@@ -197,6 +197,11 @@ var HHRoster = (function () {
         errors.push({ studentId: r.StudentID, messageTh: 'รหัสนี้อยู่แผนกอื่น' });
         return;
       }
+      // Unit admins may not edit (e.g. demote) an existing super admin.
+      if (scope.unitId && existing && existing.Role === 'super_admin') {
+        errors.push({ studentId: r.StudentID, messageTh: 'แก้ไขข้อมูลผู้ดูแลระบบสูงสุดไม่ได้' });
+        return;
+      }
       // Only unscoped imports (super admin / sheet menu) may grant super_admin.
       if (scope.unitId && r.Role === 'super_admin') {
         errors.push({ studentId: r.StudentID, messageTh: 'ตั้งบทบาท super_admin ไม่ได้' });

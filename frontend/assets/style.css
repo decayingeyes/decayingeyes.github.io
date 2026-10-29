@@ -11,6 +11,8 @@
 }
 
 * { box-sizing: border-box; }
+/* `hidden` must win over display rules such as .manual { display: flex } */
+[hidden] { display: none !important; }
 
 html, body {
   margin: 0;

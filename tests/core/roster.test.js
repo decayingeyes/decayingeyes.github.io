@@ -89,3 +89,19 @@ test('plan: unit admin cannot import into another unit or grant super_admin', ()
   assert.deepEqual(p.inserts.map((i) => i.StudentID), ['6510004']);
   assert.equal(p.newUnits.length, 0);
 });
+
+test('plan: unit admin cannot modify an existing super_admin (or demote them)', () => {
+  const current = {
+    units: [{ UnitID: 'U01', Name: 'บ้านผีสิง' }], departments: [], teams: [],
+    members: [{ StudentID: '6510001', UnitID: 'U01', Role: 'super_admin' }],
+  };
+  const rows = R.validate([
+    ['StudentID', 'FirstName', 'LastName', 'Nickname', 'Unit', 'Department', 'Team', 'Role'],
+    ['6510001', 'a', 'b', 'c', 'บ้านผีสิง', 'D', 'T', 'member'],
+  ]).rows;
+  const scoped = R.plan(rows, current, { unitId: 'U01' });
+  assert.equal(scoped.updates.length, 0);
+  assert.equal(scoped.errors.length, 1);
+  // unscoped (super admin / sheet menu) may still update
+  assert.equal(R.plan(rows, current, { unitId: null }).updates.length, 1);
+});

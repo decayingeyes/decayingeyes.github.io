@@ -109,6 +109,16 @@ var HHSheets = (function () {
   var DATE_TEXT_COLUMNS = ['WorkDate', 'Date', 'StartDate', 'EndDate'];
 
   /**
+   * Neutralise formula injection: user text starting with = + - @ would be
+   * evaluated by Sheets (e.g. =IMPORTXML(...) leaking data when the owner opens
+   * the file). A leading apostrophe stores it as literal text; reads return the
+   * text without the apostrophe.
+   */
+  function safe(v) {
+    return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v;
+  }
+
+  /**
    * Text columns may still hold a Date or number if Sheets auto-converted them
    * (e.g. rows written before the column was formatted). Read them back as text.
    */
@@ -152,7 +162,7 @@ var HHSheets = (function () {
     var values = rows.map(function (o) {
       return headers.map(function (h, i) {
         var v = o[h] === undefined || o[h] === null ? '' : o[h];
-        return formats[i] === '@' && !(v instanceof Date) ? String(v) : v;
+        return safe(formats[i] === '@' && !(v instanceof Date) ? String(v) : v);
       });
     });
     var range = sheet(name).getRange(startRow, 1, values.length, headers.length);
@@ -180,6 +190,7 @@ var HHSheets = (function () {
     clearSchemaCache: clearSchemaCache,
     ensureSchema: ensureSchema,
     readAll: readAll,
+    safe: safe,
     writeRows: writeRows,
     append: append,
   };

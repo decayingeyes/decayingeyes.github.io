@@ -105,3 +105,31 @@ test('plan: unit admin cannot modify an existing super_admin (or demote them)', 
   // unscoped (super admin / sheet menu) may still update
   assert.equal(R.plan(rows, current, { unitId: null }).updates.length, 1);
 });
+
+test('teams can be decided later: blank dept/team -> placeholders for new, kept for existing', () => {
+  const v = R.validate([
+    ['รหัสนักศึกษา', 'ชื่อ', 'นามสกุล', 'ชื่อเล่น', 'แผนก'],
+    ['6510001', 'สมชาย', 'ใจดี', 'ชาย', 'บ้าน'],
+    ['6510002', 'สมหญิง', 'รักงาน', 'หญิง', 'บ้าน'],
+  ]);
+  assert.deepEqual(v.errors, []);
+  const current = {
+    units: [{ UnitID: 'U01', Name: 'บ้าน' }],
+    departments: [{ DeptID: 'D01', UnitID: 'U01', Name: 'นักแสดง' }],
+    teams: [{ TeamID: 'T01', UnitID: 'U01', DeptID: 'D01', Name: 'ผีกะ 1' }],
+    members: [{ StudentID: '6510002', UnitID: 'U01', DeptID: 'D01', TeamID: 'T01', Role: 'member' }],
+  };
+  const p = R.plan(v.rows, current, { unitId: 'U01', rolesFromCsv: false });
+  assert.deepEqual(p.newDepartments.map((d) => d.Name), [R.NO_DEPT]);
+  assert.deepEqual(p.newTeams.map((t) => t.Name), [R.NO_TEAM]);
+  assert.equal(p.inserts[0].TeamID, p.newTeams[0].TeamID);
+  assert.equal(p.updates[0].TeamID, 'T01'); // existing person keeps their team
+});
+
+test('name and nickname are required (Thai messages)', () => {
+  const v = R.validate([
+    ['StudentID', 'FirstName', 'LastName', 'Nickname', 'Unit'],
+    ['6510001', '', 'ใจดี', '', 'บ้าน'],
+  ]);
+  assert.match(v.errors[0].messageTh, /ไม่มีชื่อ.*ไม่มีชื่อเล่น/);
+});

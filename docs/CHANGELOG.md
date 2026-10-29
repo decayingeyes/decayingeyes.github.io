@@ -34,3 +34,4 @@
 - **Card photos (owner decision 2026-10-30; spec v4 said "No photos" — organizers should be informed).** Heads (own team) and unit admins photograph members in person; nobody sets their own photo. Stored as a small JPEG data URL in the new `Photos` sheet (no extra Google scope). Shown on the member card (screen + PNG) and large on the scan result screen for face comparison. New action `photo.set`, log action `PHOTO_SET`.
 - Scan page: spoken confirmation ("ยืนยันการเข้างานของ <ชื่อ>") with an on/off toggle.
 - Website default switched to PROD; demo data remains under `?env=test`.
+- Roster import: only StudentID, first name, last name and nickname are required; blank department/team become "ยังไม่จัดฝ่าย"/"ยังไม่จัดทีม" for new people and are kept for existing people.

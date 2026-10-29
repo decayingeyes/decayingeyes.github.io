@@ -21,7 +21,11 @@ var HHRoster = (function () {
     Shift: ['shift', 'กะ', 'เวร'],
     Role: ['role', 'บทบาท', 'ตำแหน่ง'],
   };
-  var REQUIRED = ['StudentID', 'FirstName', 'LastName', 'Nickname', 'Unit', 'Department', 'Team'];
+  var REQUIRED = ['StudentID', 'FirstName', 'LastName', 'Nickname', 'Unit'];
+  // Teams can be decided later: blank department/team go here for new people
+  // (existing people keep their current ones).
+  var NO_DEPT = 'ยังไม่จัดฝ่าย';
+  var NO_TEAM = 'ยังไม่จัดทีม';
 
   var ROLE_ALIASES = {
     '': 'member', member: 'member', 'สมาชิก': 'member',
@@ -108,7 +112,8 @@ var HHRoster = (function () {
       };
       var problems = [];
       if (!A().isValidStudentId(r.StudentID)) problems.push('รหัสนักศึกษาไม่ถูกต้อง');
-      REQUIRED.slice(1).forEach(function (c) { if (!r[c]) problems.push('ไม่มี ' + c); });
+      var LABEL = { FirstName: 'ชื่อ', LastName: 'นามสกุล', Nickname: 'ชื่อเล่น', Unit: 'แผนก' };
+      REQUIRED.slice(1).forEach(function (c) { if (!r[c]) problems.push('ไม่มี' + (LABEL[c] || c)); });
       if (r.Role === null) problems.push('บทบาทไม่ถูกต้อง: "' + get('Role') + '"');
       else if (!P().isRole(r.Role)) problems.push('บทบาทไม่ถูกต้อง');
       if (seen[r.StudentID]) problems.push('รหัสซ้ำกับบรรทัด ' + seen[r.StudentID]);
@@ -208,8 +213,15 @@ var HHRoster = (function () {
         return;
       }
       var u = findOrCreateUnit(r.Unit);
-      var d = findOrCreateDept(u.UnitID, r.Department);
-      var t = findOrCreateTeam(u.UnitID, d.DeptID, r.Team);
+      var d, t;
+      if (!r.Department && !r.Team && existing && String(existing.UnitID) === u.UnitID) {
+        // No team given for someone already placed: keep where they are.
+        d = { DeptID: existing.DeptID };
+        t = { TeamID: existing.TeamID };
+      } else {
+        d = findOrCreateDept(u.UnitID, r.Department || NO_DEPT);
+        t = findOrCreateTeam(u.UnitID, d.DeptID, r.Team || NO_TEAM);
+      }
       var fields = {
         StudentID: r.StudentID, UnitID: u.UnitID, DeptID: d.DeptID, TeamID: t.TeamID,
         FirstName: r.FirstName, LastName: r.LastName, Nickname: r.Nickname, Shift: r.Shift, Role: r.Role,
@@ -230,6 +242,8 @@ var HHRoster = (function () {
   }
 
   return {
+    NO_DEPT: NO_DEPT,
+    NO_TEAM: NO_TEAM,
     parseCsv: parseCsv,
     normalizeRole: normalizeRole,
     validate: validate,

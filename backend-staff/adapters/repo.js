@@ -35,15 +35,10 @@ var HHRepo = (function () {
     });
   }
 
-  /** Append many objects at once (one write call). */
+  /** Append many objects at once (one write call, column formats applied). Caller holds the lock. */
   function appendMany(sheetName, objs) {
     if (objs.length === 0) return;
-    var headers = HHSchema.headers(sheetName);
-    var values = objs.map(function (o) {
-      return headers.map(function (h) { return o[h] === undefined || o[h] === null ? '' : o[h]; });
-    });
-    var sh = HHSheets.sheet(sheetName);
-    sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
+    HHSheets.writeRows(sheetName, HHSheets.sheet(sheetName).getLastRow() + 1, objs);
   }
 
   return {

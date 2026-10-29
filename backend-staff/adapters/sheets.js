@@ -106,6 +106,21 @@ var HHSheets = (function () {
     });
   }
 
+  var DATE_TEXT_COLUMNS = ['WorkDate', 'Date', 'StartDate', 'EndDate'];
+
+  /**
+   * Text columns may still hold a Date or number if Sheets auto-converted them
+   * (e.g. rows written before the column was formatted). Read them back as text.
+   */
+  function asText_(header, v) {
+    if (v instanceof Date) {
+      return DATE_TEXT_COLUMNS.indexOf(header) !== -1
+        ? Utilities.formatDate(v, 'Asia/Bangkok', 'yyyy-MM-dd')
+        : Utilities.formatDate(v, 'Asia/Bangkok', 'HH:mm');
+    }
+    return v === '' || v === null || v === undefined ? '' : String(v);
+  }
+
   /** All data rows as objects keyed by header. */
   function readAll(name) {
     var sh = sheet(name);
@@ -113,20 +128,48 @@ var HHSheets = (function () {
     var headers = HHSchema.headers(name);
     if (lastRow < 2) return [];
     var values = sh.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    var isText = headers.map(function (h) { return HHSchema.TEXT_COLUMNS.indexOf(h) !== -1; });
     return values.map(function (row) {
       var obj = {};
-      headers.forEach(function (h, i) { obj[h] = row[i]; });
+      headers.forEach(function (h, i) { obj[h] = isText[i] ? asText_(h, row[i]) : row[i]; });
       return obj;
     });
   }
 
+  /**
+   * Write rows starting at `startRow`, setting each column's number format first.
+   * appendRow() ignores column formats and lets Sheets guess types, which turned
+   * "2026-10-29" into a Date and student ids into numbers.
+   */
+  function writeRows(name, startRow, rows) {
+    if (rows.length === 0) return;
+    var headers = HHSchema.headers(name);
+    var formats = headers.map(function (h) {
+      if (HHSchema.TEXT_COLUMNS.indexOf(h) !== -1) return '@';
+      if (HHSchema.DATETIME_COLUMNS.indexOf(h) !== -1) return HHSchema.DATETIME_FORMAT;
+      return 'General';
+    });
+    var values = rows.map(function (o) {
+      return headers.map(function (h, i) {
+        var v = o[h] === undefined || o[h] === null ? '' : o[h];
+        return formats[i] === '@' && !(v instanceof Date) ? String(v) : v;
+      });
+    });
+    var range = sheet(name).getRange(startRow, 1, values.length, headers.length);
+    range.setNumberFormats(values.map(function () { return formats; }));
+    range.setValues(values);
+  }
+
   /** Append one object as a row, in header order. Unknown keys are ignored. */
   function append(name, obj) {
-    var headers = HHSchema.headers(name);
-    var row = headers.map(function (h) {
-      return obj[h] === undefined || obj[h] === null ? '' : obj[h];
-    });
-    sheet(name).appendRow(row);
+    var lock = LockService.getScriptLock();
+    var mine = !lock.hasLock();
+    if (mine && !lock.tryLock(10000)) throw new HHErrors.AppError('BUSY', null, 'append lock');
+    try {
+      writeRows(name, sheet(name).getLastRow() + 1, [obj]);
+    } finally {
+      if (mine) lock.releaseLock();
+    }
   }
 
   return {
@@ -137,6 +180,7 @@ var HHSheets = (function () {
     clearSchemaCache: clearSchemaCache,
     ensureSchema: ensureSchema,
     readAll: readAll,
+    writeRows: writeRows,
     append: append,
   };
 })();

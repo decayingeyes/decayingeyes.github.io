@@ -17,9 +17,7 @@
   <main>
     <div class="card stack no-print" id="to-scan" hidden style="margin-bottom:16px">
       <b>🛡️ เครื่องมือหัวหน้า</b>
-      <a class="btn" href="scan.html">📷 สแกนเข้า-ออกงานให้สมาชิก</a>
-      <a class="btn secondary" href="team.html">👥 สถานะทีมวันนี้</a>
-      <a class="btn secondary" href="admin.html" id="to-admin" hidden>🛠️ หน้าแอดมิน (อนุมัติ / ปิดงวด / ส่งออก)</a>
+      <p class="muted small">สแกน · ทีม · แอดมิน อยู่ที่แถบเมนูด้านล่างจอ</p>
       <details class="self-report">
         <summary>🙋 ไม่มีใครสแกนให้? รายงานตัวเอง</summary>
         <p class="muted small">ใช้เมื่อหาคนสแกนให้ไม่ได้จริงๆ · บันทึกเวลาจากเซิร์ฟเวอร์ · ชั่วโมงจะนับเมื่อแอดมินยืนยันแล้วเท่านั้น</p>
@@ -93,7 +91,6 @@
         card = res.data;
         HHCard.renderHtml(card);
         document.getElementById('to-scan').hidden = card.role === 'member';
-        document.getElementById('to-admin').hidden = card.role !== 'unit_admin' && card.role !== 'super_admin';
         msg.hidden = true;
         document.getElementById('card').hidden = false;
         document.getElementById('actions').hidden = false;

@@ -240,3 +240,20 @@ table.codes th, table.codes td { border-bottom: 1px solid #2c2c35; padding: 6px 
 @media print {
   table.codes th, table.codes td { border-bottom: 1px solid #000; color: #000; font-size: 12pt; }
 }
+
+/* bottom navigation (app-style, one link) */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+  display: flex; justify-content: space-around;
+  background: rgba(20, 20, 26, 0.96); border-top: 1px solid #2c2c35;
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(8px);
+}
+.bottom-nav a {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--muted); text-decoration: none; font-size: 0.75rem; padding: 4px 0; border-radius: 10px;
+}
+.bottom-nav a .ico { font-size: 1.35rem; line-height: 1.2; }
+.bottom-nav a.on { color: var(--accent); font-weight: 700; background: rgba(255, 122, 26, 0.1); }
+body.has-nav main { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+body.has-nav .flash { bottom: calc(80px + env(safe-area-inset-bottom)); }

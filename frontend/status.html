@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>สถานะระบบ — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="config.js"></script>
+  <script src="assets/api.js"></script>
+</head>
+<body>
+  <main>
+    <h1>🎃 ระบบสตาฟ บ้านผีสิง</h1>
+
+    <p class="muted">หน้านี้สำหรับผู้ดูแลระบบ · <a href="./">กลับหน้าแรก</a></p>
+    <h2>สถานะระบบ</h2>
+    <div class="card" id="status"><span class="muted">กำลังตรวจสอบ…</span></div>
+  </main>
+
+  <script>
+    (function () {
+      var box = document.getElementById('status');
+      HH.call('health').then(function (res) {
+        if (!res.ok) {
+          box.innerHTML = '<span class="bad"></span>';
+          box.firstChild.textContent = '❌ ' + HH.errorText(res);
+          return;
+        }
+        var d = res.data;
+        var rows = [
+          ['โหมด', d.env],
+          ['เวลาเซิร์ฟเวอร์', d.serverTimeTh],
+          ['เวอร์ชัน API', res.apiVersion],
+          ['ตั้งค่าแล้ว', d.configured ? '✅' : '❌'],
+          ['โครงสร้างชีต', d.schemaOk ? '✅' : '❌'],
+        ];
+        var dl = document.createElement('dl');
+        dl.className = 'kv';
+        rows.forEach(function (r) {
+          var dt = document.createElement('dt'); dt.textContent = r[0];
+          var dd = document.createElement('dd'); dd.textContent = r[1];
+          dl.appendChild(dt); dl.appendChild(dd);
+        });
+        box.innerHTML = '';
+        box.appendChild(dl);
+        if (d.env.toLowerCase() !== HH.env) {
+          var w = document.createElement('p');
+          w.className = 'warn';
+          w.textContent = '⚠️ หน้าเว็บอยู่โหมด ' + HH.env.toUpperCase() + ' แต่ระบบหลังบ้านคือ ' + d.env;
+          box.appendChild(w);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

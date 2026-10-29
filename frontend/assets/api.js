@@ -23,6 +23,20 @@
 
   var env = currentEnv();
   var tokenKey = 'hh.token.' + env; // separate login per env
+  // Role is cached only to draw the menu; every action is still checked by the server.
+  var roleKey = 'hh.role.' + env;
+
+  function rememberRole(action, res) {
+    if (!res || !res.ok || !res.data) return;
+    var role = null;
+    if (action === 'auth.login' || action === 'auth.activate' || action === 'auth.me') role = res.data.profile && res.data.profile.role;
+    if (action === 'me.card') role = res.data.role;
+    if (role) {
+      var changed = storage.get(roleKey) !== role;
+      storage.set(roleKey, role);
+      if (changed) renderNav();
+    }
+  }
 
   function apiUrl() {
     return (cfg.envs[env] && cfg.envs[env].apiUrl) || '';
@@ -51,7 +65,11 @@
         if (res && res.apiVersion && Number(String(res.apiVersion).split('.')[0]) !== cfg.apiMajor) {
           return { ok: false, requestId: res.requestId, error: { code: 'VERSION_MISMATCH', messageTh: 'เวอร์ชันหน้าเว็บไม่ตรงกับระบบ กรุณารีเฟรชหน้า' } };
         }
-        if (res && !res.ok && res.error && res.error.code === 'UNAUTHENTICATED') storage.remove(tokenKey);
+        if (res && !res.ok && res.error && res.error.code === 'UNAUTHENTICATED') {
+          storage.remove(tokenKey);
+          storage.remove(roleKey);
+        }
+        rememberRole(action, res);
         return res;
       })
       .catch(function () {
@@ -139,6 +157,53 @@
 
   document.addEventListener('DOMContentLoaded', enhancePasswords);
 
+  // ---- bottom navigation: one app, menu items by role ----
+  var RANK = { member: 1, deputy: 2, head: 3, unit_admin: 4, super_admin: 5 };
+  var NAV = [
+    { href: 'portal.html', icon: '🪪', label: 'บัตรของฉัน', minRank: 1 },
+    { href: 'scan.html', icon: '📷', label: 'สแกน', minRank: 2 },
+    { href: 'team.html', icon: '👥', label: 'ทีม', minRank: 2 },
+    { href: 'admin.html', icon: '🛠️', label: 'แอดมิน', minRank: 4 },
+  ];
+
+  function renderNav() {
+    if (!document.body) return;
+    var path = window.location.pathname;
+    var inApp = path.indexOf('/staff/') !== -1 && !/\/(login|activate)\.html$/.test(path);
+    var old = document.getElementById('hh-nav');
+    if (old) old.remove();
+    if (!inApp || !storage.get(tokenKey)) return;
+    var rank = RANK[storage.get(roleKey)] || 1;
+    var items = NAV.filter(function (n) { return rank >= n.minRank; });
+    if (items.length < 2) return; // members only have their card: no menu needed
+    var nav = document.createElement('nav');
+    nav.id = 'hh-nav';
+    nav.className = 'bottom-nav no-print';
+    items.forEach(function (n) {
+      var a = document.createElement('a');
+      a.href = n.href;
+      if (path.slice(-n.href.length) === n.href) a.className = 'on';
+      var i = document.createElement('span');
+      i.className = 'ico';
+      i.textContent = n.icon;
+      var t = document.createElement('span');
+      t.textContent = n.label;
+      a.appendChild(i);
+      a.appendChild(t);
+      nav.appendChild(a);
+    });
+    document.body.appendChild(nav);
+    document.body.classList.add('has-nav');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    renderNav();
+    // First visit after an update: learn the role so the menu can appear.
+    if (storage.get(tokenKey) && !storage.get(roleKey) && window.location.pathname.indexOf('/staff/') !== -1) {
+      call('auth.me');
+    }
+  });
+
   window.HH = {
     env: env,
     call: call,
@@ -151,7 +216,7 @@
     token: {
       get: function () { return storage.get(tokenKey); },
       set: function (t) { storage.set(tokenKey, t); },
-      clear: function () { storage.remove(tokenKey); },
+      clear: function () { storage.remove(tokenKey); storage.remove(roleKey); },
     },
   };
 })();

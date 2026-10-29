@@ -105,6 +105,40 @@
     }
   }
 
+  /**
+   * Add a show/hide toggle to password inputs and warn when Thai characters
+   * are typed (a Thai keyboard layout silently turns "demo1234" into Thai letters).
+   */
+  function enhancePasswords() {
+    var inputs = document.querySelectorAll('input[type="password"]');
+    Array.prototype.forEach.call(inputs, function (input) {
+      var toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'pw-toggle';
+      toggle.textContent = 'แสดง';
+      toggle.addEventListener('click', function () {
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        toggle.textContent = show ? 'ซ่อน' : 'แสดง';
+      });
+      var warn = document.createElement('p');
+      warn.className = 'warn pw-warn';
+      warn.hidden = true;
+      warn.textContent = '⚠️ แป้นพิมพ์เป็นภาษาไทยอยู่ กรุณาสลับเป็นภาษาอังกฤษ';
+      input.addEventListener('input', function () {
+        warn.hidden = !/[฀-๿]/.test(input.value);
+      });
+      var wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      wrap.appendChild(toggle);
+      wrap.parentNode.insertBefore(warn, wrap.nextSibling);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', enhancePasswords);
+
   window.HH = {
     env: env,
     call: call,

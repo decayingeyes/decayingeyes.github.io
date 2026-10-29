@@ -116,3 +116,12 @@ form .btn { margin-top: 20px; }
   .member-card { background: #fff; color: #000; border: 1px solid #000; max-width: 9cm; margin: 0 auto; }
   .member-card .event, .member-card .sid, .member-card .hint { color: #000; }
 }
+
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 72px; }
+.pw-toggle {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  border: 0; background: #2c2c35; color: var(--text); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 0.85rem; cursor: pointer;
+}
+.pw-warn { margin: 6px 0 0; font-size: 0.9rem; }

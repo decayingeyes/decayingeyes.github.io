@@ -67,7 +67,8 @@ var HHSummarySheets = (function () {
       body.setBackgrounds(t.states.map(function (s) { return header.map(function () { return STATE_BG[s]; }); }));
     }
     sh.setFrozenRows(4);
-    sh.autoResizeColumns(1, header.length);
+    // Fixed widths: auto-resize would stretch column A to the long title in A1.
+    [120, 80, 180, 110, 90, 90, 90, 100, 130, 120].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
     protectView_(sh);
 
     // --- matrix ---
@@ -92,8 +93,9 @@ var HHSummarySheets = (function () {
     }
     sh2.setFrozenRows(4);
     sh2.setFrozenColumns(2);
-    sh2.autoResizeColumns(1, 4);
+    [80, 180, 110, 80].forEach(function (w, i) { sh2.setColumnWidth(i + 1, w); });
     if (dates.length > 0) sh2.setColumnWidths(5, dates.length, 170);
+    sh2.setColumnWidths(5 + dates.length, 2, 100);
     protectView_(sh2);
 
     HHProps.set(BUILT_DATE_KEY, today);

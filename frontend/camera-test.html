@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>ทดสอบกล้อง — ระบบสตาฟ</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+  <main>
+    <h1>🔧 ทดสอบกล้องสแกน</h1>
+    <p class="muted">หน้านี้ไม่ต้องล็อกอิน และไม่บันทึกอะไรลงระบบ ใช้เช็คว่ากล้องอ่านโค้ดได้ไหม</p>
+    <div class="camera-box">
+      <div class="viewfinder"><video id="video" playsinline muted autoplay></video><div class="aim"></div></div>
+      <button class="btn" id="start">เปิดกล้อง</button>
+    </div>
+    <div class="card"><b>ผลอ่าน:</b> <span id="result" class="muted">ยังไม่มี</span></div>
+    <div class="card"><b>สถานะ:</b><pre id="log" style="white-space:pre-wrap;margin:6px 0 0;font-size:0.85rem"></pre></div>
+    <h2>QR ตัวอย่าง (ส่องจากอีกเครื่อง)</h2>
+    <div style="background:#fff;padding:16px;border-radius:12px;max-width:260px" id="sample"></div>
+  </main>
+  <script>
+    (function () {
+      var logEl = document.getElementById('log');
+      function log(s) { logEl.textContent += s + '\n'; }
+      window.addEventListener('error', function (e) { log('JS error: ' + e.message); });
+      window.addEventListener('unhandledrejection', function (e) { log('Promise error: ' + (e.reason && (e.reason.name + ' ' + e.reason.message))); });
+
+      log('browser: ' + navigator.userAgent);
+      log('ZXing loaded: ' + (typeof ZXing !== 'undefined'));
+      log('mediaDevices: ' + !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+      log('secure context (https): ' + window.isSecureContext);
+
+      var qr = qrcode(0, 'M'); qr.addData('9900004-PV7K'); qr.make();
+      document.getElementById('sample').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 16, scalable: true });
+
+      document.getElementById('start').addEventListener('click', function () {
+        this.hidden = true;
+        log('requesting camera…');
+        var hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.CODE_128]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        var reader = new ZXing.BrowserMultiFormatReader(hints, 150);
+        var frames = 0, lastErr = '';
+        var video = document.getElementById('video');
+        reader.decodeFromConstraints({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
+          video, function (result, err) {
+            frames++;
+            if (err && err.name !== 'NotFoundException' && err.name !== lastErr) { lastErr = err.name; log('decode error: ' + err.name + ' ' + err.message); }
+            if (frames === 1 || frames % 20 === 0) log('frames tried: ' + frames + ' · video ' + video.videoWidth + '×' + video.videoHeight);
+            if (result) {
+              document.getElementById('result').textContent = result.getText() + ' (' + ZXing.BarcodeFormat[result.getBarcodeFormat()] + ')';
+              document.getElementById('result').className = 'ok';
+              if (navigator.vibrate) navigator.vibrate(80);
+            }
+          }).then(function () { log('camera started'); })
+          .catch(function (e) { log('camera FAILED: ' + (e && (e.name + ' ' + e.message))); });
+      });
+    })();
+  </script>
+</body>
+</html>

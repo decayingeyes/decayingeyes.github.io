@@ -21,7 +21,7 @@
 
     <nav class="tabs no-print" id="tabs" hidden>
       <button data-tab="approve">✅ อนุมัติ <span class="count-badge" id="n-pending" hidden></span></button>
-      <button data-tab="members">👥 สมาชิก</button>
+      <button data-tab="members">👥 สมาชิก <span class="count-badge" id="n-signups" hidden></span></button>
       <button data-tab="periods">🔒 ปิดงวด / ส่งออก</button>
     </nav>
 
@@ -36,6 +36,11 @@
     <!-- ===== members ===== -->
     <section class="tab-panel" id="tab-members" hidden>
       <div class="no-print">
+        <section id="signup-box" hidden>
+          <h2>🆕 รออนุมัติการสมัคร</h2>
+          <p class="muted small">ตรวจว่าเป็นคนในงานจริงก่อนอนุมัติ · อนุมัติแล้วจะเป็น "สมาชิก" ทีม "ยังไม่จัดทีม" · ปฏิเสธแล้วรหัสนั้นสมัครใหม่ได้</p>
+          <div id="signups"></div>
+        </section>
         <div class="role-summary" id="role-summary"></div>
 
         <details class="card import-box" id="import-box">
@@ -213,6 +218,46 @@
       var roster = null;
       var openPanel = null; // studentId whose manage panel is open
       var ROLE_ICON = { member: '🙂', deputy: '🔰', head: '⭐', unit_admin: '🛠️', super_admin: '👑' };
+
+      function loadSignups() {
+        return HH.call('signup.list').then(function (res) {
+          if (!res.ok) return;
+          var list = res.data;
+          $('n-signups').hidden = list.length === 0;
+          $('n-signups').textContent = list.length;
+          $('signup-box').hidden = list.length === 0;
+          var box = $('signups');
+          box.innerHTML = '';
+          list.forEach(function (s) {
+            var card = el('div', 'card signup-card');
+            var head = el('div', 'mr-head');
+            head.appendChild(el('span', 'mr-nick', s.nickname));
+            head.appendChild(el('span', 'muted small', 'สมัคร ' + s.signedUpAt));
+            card.appendChild(head);
+            card.appendChild(el('div', 'muted small', s.fullName + ' · ' + s.studentId));
+            var two = el('div', 'two');
+            var ok = el('button', 'btn in', '✅ อนุมัติ');
+            var no = el('button', 'btn secondary', '❌ ปฏิเสธ');
+            var out = el('p', 'msg');
+            two.appendChild(ok);
+            two.appendChild(no);
+            card.appendChild(two);
+            card.appendChild(out);
+            [[ok, true], [no, false]].forEach(function (pair) {
+              pair[0].type = 'button';
+              pair[0].addEventListener('click', function () {
+                HH.busy(pair[0], true, '…');
+                HH.call('signup.review', { studentId: s.studentId, approve: pair[1] }).then(function (res2) {
+                  if (!res2.ok) { HH.busy(pair[0], false); HH.say(out, HH.errorText(res2), 'bad'); return; }
+                  loadSignups();
+                  if (pair[1]) loadMembers();
+                });
+              });
+            });
+            box.appendChild(card);
+          });
+        });
+      }
 
       function loadMembers() {
         membersLoaded = true;
@@ -505,6 +550,7 @@
 
       loadApprovals().then(function (ok) {
         if (!ok) return;
+        loadSignups();
         var start = (location.hash || '#approve').slice(1);
         showTab(['approve', 'members', 'periods'].indexOf(start) !== -1 ? start : 'approve');
       });

@@ -12,6 +12,7 @@ function handlers_() {
     'health': handleHealth_,
     'auth.activate': handleAuthActivate_,
     'auth.login': handleAuthLogin_,
+    'auth.signup': handleAuthSignup_,
     'auth.logout': handleAuthLogout_,
     'auth.me': handleAuthMe_,
     'me.card': handleMeCard_,
@@ -37,6 +38,8 @@ function handlers_() {
     'roster.list': handleRosterList_,
     'role.set': handleRoleSet_,
     'photo.set': handlePhotoSet_,
+    'signup.list': handleSignupList_,
+    'signup.review': handleSignupReview_,
   };
 }
 

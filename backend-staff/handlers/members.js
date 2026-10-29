@@ -16,7 +16,9 @@ function handleRosterList_(payload, ctx) {
   var teamName = {};
   teams.forEach(function (t) { teamName[String(t.TeamID)] = String(t.Name); });
   var withPhoto = HHPhotos.idsWithPhoto(unitId);
-  var members = unitRows_('Members', unitId).map(function (m) {
+  var members = unitRows_('Members', unitId).filter(function (m) {
+    return m.Status !== 'REJECTED' && m.Status !== 'PENDING';
+  }).map(function (m) {
     var dept = depts[String(m.DeptID)] || { name: '', color: '#888' };
     return {
       studentId: String(m.StudentID), nickname: String(m.Nickname),
@@ -78,5 +80,37 @@ function handlePhotoSet_(payload, ctx) {
     HHLog.append({ requestId: ctx.requestId, unitId: row.data.UnitID, studentId: row.data.StudentID, action: 'PHOTO_SET',
       actorId: ctx.actor.studentId, method: 'ADMIN', note: dataUrl ? 'set (' + dataUrl.length + ' chars)' : 'removed' });
     return { studentId: String(row.data.StudentID), hasPhoto: !!dataUrl };
+  });
+}
+
+/** Self sign-ups waiting for this admin's unit. */
+function handleSignupList_(payload, ctx) {
+  return unitRows_('Members', ctx.actor.unitId)
+    .filter(function (m) { return m.Status === 'PENDING'; })
+    .map(function (m) {
+      return {
+        studentId: String(m.StudentID), nickname: String(m.Nickname),
+        fullName: String(m.FirstName) + ' ' + String(m.LastName),
+        signedUpAt: m.ActivatedAt ? HHHours.bangkokDate(new Date(m.ActivatedAt)) + ' ' + HHHours.bangkokTime(new Date(m.ActivatedAt)) : '',
+      };
+    });
+}
+
+/** payload: { studentId, approve: boolean } — approve -> ACTIVE member; reject -> REJECTED (may sign up again). */
+function handleSignupReview_(payload, ctx) {
+  return HHLock.withLock(function () {
+    var row = HHRepo.findBy('Members', 'StudentID', HHAuth.normalizeStudentId(payload.studentId));
+    if (!row || row.data.Status !== 'PENDING') throw new HHErrors.AppError('NOT_FOUND', 'ไม่พบผู้สมัครที่รออนุมัติ');
+    if (ctx.actor.role !== 'super_admin' && String(row.data.UnitID) !== String(ctx.actor.unitId)) {
+      throw new HHErrors.AppError('FORBIDDEN', 'ผู้สมัครคนนี้อยู่แผนกอื่น');
+    }
+    var approve = payload.approve === true;
+    HHRepo.update('Members', row.row, approve
+      ? { Status: 'ACTIVE' }
+      : { Status: 'REJECTED', PasswordHash: '', Salt: '' });
+    HHSessions.invalidateMember(String(row.data.StudentID));
+    HHLog.append({ requestId: ctx.requestId, unitId: row.data.UnitID, studentId: row.data.StudentID,
+      action: approve ? 'SIGNUP_APPROVE' : 'SIGNUP_REJECT', actorId: ctx.actor.studentId, method: 'ADMIN' });
+    return { studentId: String(row.data.StudentID), status: approve ? 'ACTIVE' : 'REJECTED' };
   });
 }

@@ -27,6 +27,8 @@ var HHPermissions = (function () {
     // auth
     'auth.activate': { minRole: 'public', scope: 'self' },
     'auth.login': { minRole: 'public', scope: 'self' },
+    // Not in spec v4: self sign-up, usable only after a unit admin approves it.
+    'auth.signup': { minRole: 'public', scope: 'self' },
     'auth.logout': { minRole: 'member', scope: 'self' },
     'auth.me': { minRole: 'member', scope: 'self' },
 
@@ -61,6 +63,8 @@ var HHPermissions = (function () {
     'roster.update': { minRole: 'unit_admin', scope: 'unit' },
     // Not in spec v4: member list for the admin page's member management tab.
     'roster.list': { minRole: 'unit_admin', scope: 'unit' },
+    'signup.list': { minRole: 'unit_admin', scope: 'unit' },
+    'signup.review': { minRole: 'unit_admin', scope: 'unit' },
     'role.set': { minRole: 'unit_admin', scope: 'unit' },
     'scanner.assign': { minRole: 'unit_admin', scope: 'unit' },
     'code.reissue': { minRole: 'unit_admin', scope: 'unit' },

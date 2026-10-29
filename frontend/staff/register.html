@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>สมัครสมาชิก — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main>
+    <h1>🎃 สมัครสมาชิก</h1>
+    <p class="muted">กรอกข้อมูลตามจริง แล้วรอแอดมินอนุมัติ — อนุมัติแล้วเข้าสู่ระบบด้วยรหัสนักศึกษาและรหัสผ่านที่ตั้งไว้ได้เลย</p>
+
+    <form id="form" autocomplete="on">
+      <label for="sid">รหัสนักศึกษา</label>
+      <input id="sid" name="username" inputmode="numeric" autocomplete="username" required>
+      <div class="two">
+        <div><label for="fn">ชื่อ</label><input id="fn" autocomplete="given-name" maxlength="60" required></div>
+        <div><label for="ln">นามสกุล</label><input id="ln" autocomplete="family-name" maxlength="60" required></div>
+      </div>
+      <label for="nick">ชื่อเล่น</label>
+      <input id="nick" autocomplete="nickname" maxlength="60" required>
+      <label for="pw">ตั้งรหัสผ่าน (อย่างน้อย 8 ตัวอักษร)</label>
+      <input id="pw" type="password" autocomplete="new-password" minlength="8" required>
+      <label for="pw2">ยืนยันรหัสผ่านอีกครั้ง</label>
+      <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+      <button class="btn" id="submit" type="submit">สมัครสมาชิก</button>
+      <p class="msg" id="msg"></p>
+    </form>
+
+    <div class="card done" id="done" hidden>
+      <div class="done-icon">✅</div>
+      <h2>สมัครเรียบร้อยแล้ว</h2>
+      <p>รอแอดมินอนุมัติ แล้วเข้าสู่ระบบด้วย<br><b id="done-sid"></b> และรหัสผ่านที่ตั้งไว้</p>
+      <a class="btn" href="login.html">ไปหน้าเข้าสู่ระบบ</a>
+    </div>
+
+    <div class="links">
+      <p><a href="login.html">มีบัญชีแล้ว? เข้าสู่ระบบ</a></p>
+      <p><a href="activate.html">ได้รหัส 6 ตัวจากหัวหน้า? เปิดใช้งานบัญชีที่นี่</a></p>
+    </div>
+  </main>
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      $('form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        if ($('pw').value !== $('pw2').value) { HH.say($('msg'), 'รหัสผ่านสองช่องไม่ตรงกัน', 'bad'); return; }
+        HH.busy($('submit'), true, 'กำลังสมัคร…');
+        HH.say($('msg'), '');
+        HH.call('auth.signup', {
+          studentId: $('sid').value, firstName: $('fn').value, lastName: $('ln').value,
+          nickname: $('nick').value, password: $('pw').value,
+        }).then(function (res) {
+          HH.busy($('submit'), false);
+          if (!res.ok) { HH.say($('msg'), HH.errorText(res), 'bad'); return; }
+          $('done-sid').textContent = 'รหัส ' + res.data.studentId;
+          $('form').hidden = true;
+          $('done').hidden = false;
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

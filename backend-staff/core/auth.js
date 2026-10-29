@@ -143,7 +143,36 @@ var HHAuth = (function () {
     return null;
   }
 
+  /**
+   * Self sign-up form (decision 2026-10-30: friends sign up themselves, a unit
+   * admin approves before the account works).
+   * @return {string|null} Thai reason when the form is not acceptable
+   */
+  function signupProblem(f, minPasswordLength) {
+    if (!isValidStudentId(f.studentId)) return 'รหัสนักศึกษาไม่ถูกต้อง';
+    var labels = { firstName: 'ชื่อ', lastName: 'นามสกุล', nickname: 'ชื่อเล่น' };
+    for (var k in labels) {
+      var v = String(f[k] || '').trim();
+      if (!v) return 'กรุณากรอก' + labels[k];
+      if (v.length > 60) return labels[k] + 'ยาวเกินไป';
+    }
+    return passwordProblem(f.password, minPasswordLength);
+  }
+
+  /**
+   * What a sign-up may do with an existing Members row for the same id.
+   * @return {{ok: boolean, overwrite: boolean, messageTh: (string|null)}}
+   */
+  function signupAgainst(existing) {
+    if (!existing) return { ok: true, overwrite: false, messageTh: null };
+    if (existing.Status === 'REJECTED') return { ok: true, overwrite: true, messageTh: null };
+    if (existing.Status === 'PENDING') return { ok: false, overwrite: false, messageTh: 'รหัสนี้สมัครไว้แล้ว รอแอดมินอนุมัติ' };
+    return { ok: false, overwrite: false, messageTh: 'รหัสนี้มีบัญชีอยู่แล้ว ให้เข้าสู่ระบบ หรือขอรหัสเปิดใช้งานใหม่จากหัวหน้า' };
+  }
+
   return {
+    signupProblem: signupProblem,
+    signupAgainst: signupAgainst,
     MAX_PHOTO_CHARS: MAX_PHOTO_CHARS,
     photoProblem: photoProblem,
     roleChangeProblem: roleChangeProblem,

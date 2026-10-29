@@ -158,3 +158,17 @@ test('card photos: taken by head (own team) or admin, never by yourself; JPEG da
   assert.ok(A.photoProblem(head, m('M1'), 'data:image/jpeg;base64,<script>', true));
   assert.ok(A.photoProblem(head, m('M1'), 'data:image/jpeg;base64,' + 'A'.repeat(A.MAX_PHOTO_CHARS), true));
 });
+
+test('self sign-up: form validation and existing-account rules', () => {
+  const ok = { studentId: '67060200', firstName: 'สมชาย', lastName: 'ใจดี', nickname: 'ชาย', password: 'abcd1234' };
+  assert.equal(A.signupProblem(ok, 8), null);
+  assert.ok(A.signupProblem({ ...ok, studentId: '12' }, 8));
+  assert.ok(A.signupProblem({ ...ok, nickname: '  ' }, 8));
+  assert.ok(A.signupProblem({ ...ok, firstName: 'ก'.repeat(61) }, 8));
+  assert.ok(A.signupProblem({ ...ok, password: 'short' }, 8));
+  assert.deepEqual(A.signupAgainst(null), { ok: true, overwrite: false, messageTh: null });
+  assert.equal(A.signupAgainst({ Status: 'REJECTED' }).overwrite, true);
+  assert.equal(A.signupAgainst({ Status: 'PENDING' }).ok, false);
+  assert.equal(A.signupAgainst({ Status: 'ACTIVE' }).ok, false);
+  assert.equal(A.signupAgainst({ Status: 'DISABLED' }).ok, false);
+});

@@ -8,7 +8,7 @@ const SPEC_ACTIONS = [
   'auth.activate', 'auth.login', 'auth.logout', 'auth.me',
   'me.card', 'me.today', 'me.history', 'me.schedule', 'me.reports', 'me.report.create', 'me.selfReport',
   'scan.lookup', 'scan.confirm',
-  'team.status', 'team.reports', 'team.report.resolve', 'team.activationCode.issue', 'correction.propose',
+  'team.status', 'team.reports', 'team.report.resolve', 'team.activationCode.issue', 'photo.set', 'correction.propose',
   'correction.list', 'correction.approve', 'correction.reject', 'roster.import', 'roster.update', 'roster.list',
   'role.set', 'scanner.assign', 'code.reissue', 'schedule.import', 'schedule.update',
   'period.close', 'period.reopen', 'export.summary', 'dashboard.get', 'rebuild.fromLog',

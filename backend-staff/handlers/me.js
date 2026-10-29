@@ -9,6 +9,7 @@ function handleMeCard_(payload, ctx) {
   var p = profileOf_(m.data);
   p.eventName = HHConfig.get().EVENT_NAME;
   p.barcode = HHBarcode.payload(String(m.data.StudentID), Number(m.data.CodeVersion) || 1, secret, HHCrypto.hmacBytes);
+  p.photo = HHPhotos.get(m.data.StudentID);
   return p;
 }
 

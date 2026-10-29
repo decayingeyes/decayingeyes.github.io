@@ -38,6 +38,11 @@
   }
 
   function renderHtml(c) {
+    var ph = document.getElementById('c-photo');
+    if (ph) {
+      ph.hidden = !c.photo;
+      if (c.photo) ph.src = c.photo;
+    }
     document.getElementById('c-event').textContent = c.eventName + (c.unitName ? ' — ' + c.unitName : '');
     document.getElementById('c-nick').textContent = c.nickname;
     document.getElementById('c-name').textContent = c.firstName + ' ' + c.lastName;
@@ -57,11 +62,22 @@
     } while (ctx.measureText(text).width > maxWidth && s > 20);
   }
 
-  /** @return {Promise<string>} PNG data URL, 1080x1920 portrait */
+  function loadImage(src) {
+    return new Promise(function (resolve) {
+      if (!src) { resolve(null); return; }
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { resolve(null); };
+      img.src = src;
+    });
+  }
+
+  /** @return {Promise<string>} PNG data URL, 1080 wide portrait (taller when there is a photo) */
   function toPng(c) {
     var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-    return ready.then(function () {
-      var W = 1080, H = 1920, PAD = 60;
+    return Promise.all([ready, loadImage(c.photo)]).then(function (r) { return r[1]; }).then(function (photo) {
+      var DY = photo ? 420 : 0; // room for the photo: everything below shifts down
+      var W = 1080, H = 1920 + DY, PAD = 60;
       var canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
       var ctx = canvas.getContext('2d');
@@ -72,6 +88,19 @@
       ctx.fillStyle = '#a0a0ab';
       fitText(ctx, c.eventName + (c.unitName ? ' — ' + c.unitName : ''), W - PAD * 2, 44, '700');
       ctx.fillText(c.eventName + (c.unitName ? ' — ' + c.unitName : ''), W / 2, 150);
+      if (photo) {
+        var pw = 300, ph = 400, px = (W - pw) / 2, py = 200;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(px, py, pw, ph);
+        ctx.clip();
+        ctx.drawImage(photo, px, py, pw, ph);
+        ctx.restore();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(px, py, pw, ph);
+      }
+      ctx.translate(0, DY);
 
       ctx.fillStyle = '#f2f2f5';
       fitText(ctx, c.nickname, W - PAD * 2, 260, '700');

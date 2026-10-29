@@ -140,3 +140,21 @@ test('roster plan: web imports ignore Role (everyone joins as member)', () => {
   const owner = R.plan(rows, current, { unitId: null });
   assert.equal(owner.inserts[0].Role, 'head'); // sheet menu / seed may still set roles
 });
+
+test('card photos: taken by head (own team) or admin, never by yourself; JPEG data URL only', () => {
+  const head = { studentId: 'H1', role: 'head', unitId: 'U01', teamId: 'T01' };
+  const ua = { studentId: 'A1', role: 'unit_admin', unitId: 'U01', teamId: 'T09' };
+  const dep = { studentId: 'D1', role: 'deputy', unitId: 'U01', teamId: 'T01' };
+  const m = (id, unit = 'U01') => ({ StudentID: id, UnitID: unit });
+  const ok = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==';
+  assert.equal(A.photoProblem(head, m('M1'), ok, true), null);
+  assert.ok(A.photoProblem(head, m('M1'), ok, false)); // other team
+  assert.ok(A.photoProblem(head, m('H1'), ok, true)); // own photo
+  assert.ok(A.photoProblem(dep, m('M1'), ok, true)); // deputies cannot
+  assert.equal(A.photoProblem(ua, m('M1'), ok, false), null);
+  assert.ok(A.photoProblem(ua, m('M2', 'U02'), ok, false));
+  assert.equal(A.photoProblem(head, m('M1'), '', true), null); // removing is allowed
+  assert.ok(A.photoProblem(head, m('M1'), 'data:image/png;base64,AAAA', true));
+  assert.ok(A.photoProblem(head, m('M1'), 'data:image/jpeg;base64,<script>', true));
+  assert.ok(A.photoProblem(head, m('M1'), 'data:image/jpeg;base64,' + 'A'.repeat(A.MAX_PHOTO_CHARS), true));
+});

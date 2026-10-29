@@ -29,3 +29,8 @@
 - Role/status changes apply immediately (per-member cache epoch) instead of after up to 10 minutes.
 - Corrections may not overlap another session of the same member (checked on propose and again on approve); approval writes the hours before marking the request APPROVED.
 - Site moved to https://decayingeyes.github.io/ (GitHub account renamed to `decayingeyes`, repository renamed to `decayingeyes.github.io`).
+
+## 0.5.0 — 2026-10-30
+- **Card photos (owner decision 2026-10-30; spec v4 said "No photos" — organizers should be informed).** Heads (own team) and unit admins photograph members in person; nobody sets their own photo. Stored as a small JPEG data URL in the new `Photos` sheet (no extra Google scope). Shown on the member card (screen + PNG) and large on the scan result screen for face comparison. New action `photo.set`, log action `PHOTO_SET`.
+- Scan page: spoken confirmation ("ยืนยันการเข้างานของ <ชื่อ>") with an on/off toggle.
+- Website default switched to PROD; demo data remains under `?env=test`.

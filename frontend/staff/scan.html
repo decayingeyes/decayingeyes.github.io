@@ -39,6 +39,8 @@
 
     <!-- result -->
     <div id="result" class="card result" hidden>
+      <img class="scan-photo" id="r-photo" alt="รูปบัตร" hidden>
+      <p class="muted small" id="r-nophoto" hidden>ยังไม่มีรูปบัตร — ดูให้แน่ใจว่าเป็นตัวจริง</p>
       <div class="r-nick" id="r-nick"></div>
       <div id="r-name"></div>
       <div class="muted" id="r-sid"></div>
@@ -222,6 +224,10 @@
       function showResult(d) {
         current = d;
         var m = d.member;
+        $('r-photo').hidden = !m.photo;
+        $('r-nophoto').hidden = !!m.photo;
+        if (m.photo) $('r-photo').src = m.photo;
+        else $('r-photo').removeAttribute('src');
         $('r-nick').textContent = m.nickname;
         $('r-name').textContent = m.fullName;
         $('r-sid').textContent = m.studentId;

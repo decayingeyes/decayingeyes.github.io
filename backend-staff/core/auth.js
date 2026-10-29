@@ -124,7 +124,28 @@ var HHAuth = (function () {
     return null;
   }
 
+  var MAX_PHOTO_CHARS = 45000; // a Sheets cell holds 50,000 characters
+
+  /**
+   * Card photos are taken in person by a head (own team) or unit admin, never
+   * by the member themself (a member could otherwise put a stand-in's face on
+   * their card). Empty dataUrl = remove the photo.
+   * @return {string|null}
+   */
+  function photoProblem(actor, target, dataUrl, coversTeam) {
+    if (String(target.StudentID) === String(actor.studentId)) return 'ตั้งรูปบัตรของตัวเองไม่ได้ ให้หัวหน้าหรือแอดมินถ่ายให้';
+    if (actor.role !== 'super_admin' && String(target.UnitID) !== String(actor.unitId)) return 'สมาชิกคนนี้อยู่แผนกอื่น';
+    if (actor.role === 'head' && !coversTeam) return 'สมาชิกคนนี้ไม่ได้อยู่ทีมของคุณ';
+    if (!P().atLeast(actor.role, 'head')) return 'ต้องเป็นหัวหน้าขึ้นไป';
+    if (dataUrl === '') return null;
+    if (typeof dataUrl !== 'string' || !/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(dataUrl)) return 'ไฟล์รูปไม่ถูกต้อง';
+    if (dataUrl.length > MAX_PHOTO_CHARS) return 'รูปใหญ่เกินไป';
+    return null;
+  }
+
   return {
+    MAX_PHOTO_CHARS: MAX_PHOTO_CHARS,
+    photoProblem: photoProblem,
     roleChangeProblem: roleChangeProblem,
     activationCodeProblem: activationCodeProblem,
     CODE_ALPHABET: CODE_ALPHABET,

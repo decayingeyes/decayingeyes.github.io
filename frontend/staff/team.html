@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../assets/style.css">
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>
+  <script src="../assets/photo.js"></script>
 </head>
 <body>
   <main class="wide">
@@ -111,7 +112,21 @@
           head.appendChild(el('span', 'mr-nick', s.icon + ' ' + m.nickname + (m.overdue ? ' ⏰ อยู่นานเกินกำหนด' : '')));
           head.appendChild(el('span', 'mr-hours', m.sessions.length ? hoursText(m.hoursToday) : ''));
           row.appendChild(head);
-          row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.teamName));
+          row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.teamName + (m.hasPhoto ? ' · 🖼️ มีรูปบัตร' : '')));
+          // Heads/admins photograph members in person for the card (never themselves).
+          if (me && me.studentId !== m.studentId && ['head', 'unit_admin', 'super_admin'].indexOf(me.role) !== -1) {
+            var pb = el('button', 'btn secondary small-btn photo-btn', m.hasPhoto ? '📷 ถ่ายรูปบัตรใหม่' : '📷 ถ่ายรูปบัตร');
+            pb.type = 'button';
+            var pmsg = el('span', 'small');
+            pb.addEventListener('click', function () {
+              HHPhoto.capture(m.studentId, function (status, msg) {
+                if (status === 'ok') { m.hasPhoto = true; HH.say(pmsg, ' ✅ บันทึกรูปแล้ว', 'ok'); }
+                else HH.say(pmsg, ' ' + msg, 'bad');
+              });
+            });
+            row.appendChild(pb);
+            row.appendChild(pmsg);
+          }
           m.sessions.forEach(function (x) {
             var line = 'เข้า ' + x.in + (x.scannedInBy ? ' (โดย ' + x.scannedInBy + ')' : '');
             line += x.status === 'NEEDS_REVIEW'
@@ -213,8 +228,12 @@
         if (!$('c-date').value) $('c-date').value = d.workDate;
       }
 
+      var me = null;
       HH.call('auth.me').then(function (res) {
-        if (res.ok && ['head', 'unit_admin', 'super_admin'].indexOf(res.data.profile.role) !== -1) $('propose-box').hidden = false;
+        if (!res.ok) return;
+        me = res.data.profile;
+        if (['head', 'unit_admin', 'super_admin'].indexOf(me.role) !== -1) $('propose-box').hidden = false;
+        if (last) render(last); // show photo buttons now that we know who is looking
       });
 
       $('propose').addEventListener('submit', function (e) {

@@ -36,6 +36,8 @@ var HHSchema = (function () {
     Alerts: ['AlertID', 'UnitID', 'Type', 'StudentID', 'Detail', 'CreatedAt', 'Status'],
     DashboardCache: ['UnitID', 'Metric', 'Key', 'Value', 'UpdatedAt'],
     Errors: ['Timestamp', 'Env', 'RequestId', 'Action', 'StudentID', 'Code', 'Message', 'Stack'],
+    // Added after spec v4 (owner decision 2026-10-30): card photo as a small JPEG data URL.
+    Photos: ['StudentID', 'UnitID', 'Photo', 'UpdatedAt', 'UpdatedBy'],
   };
 
   /**

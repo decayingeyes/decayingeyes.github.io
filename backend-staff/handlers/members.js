@@ -15,6 +15,7 @@ function handleRosterList_(payload, ctx) {
   unitRows_('Departments', unitId).forEach(function (d) { depts[String(d.DeptID)] = { name: String(d.Name), color: String(d.Color || '#888') }; });
   var teamName = {};
   teams.forEach(function (t) { teamName[String(t.TeamID)] = String(t.Name); });
+  var withPhoto = HHPhotos.idsWithPhoto(unitId);
   var members = unitRows_('Members', unitId).map(function (m) {
     var dept = depts[String(m.DeptID)] || { name: '', color: '#888' };
     return {
@@ -23,7 +24,7 @@ function handleRosterList_(payload, ctx) {
       teamId: String(m.TeamID), teamName: teamName[String(m.TeamID)] || '',
       deptName: dept.name, deptColor: dept.color,
       role: String(m.Role), roleTh: ROLE_TH[m.Role] || String(m.Role),
-      activated: !!m.PasswordHash, status: String(m.Status),
+      activated: !!m.PasswordHash, status: String(m.Status), hasPhoto: !!withPhoto[String(m.StudentID)],
       // What this admin may change it to (empty = locked for this admin).
       canSetTo: Object.keys(ROLE_TH).filter(function (r) {
         return r !== String(m.Role) && !HHAuth.roleChangeProblem(ctx.actor, m, r);
@@ -59,5 +60,23 @@ function handleRoleSet_(payload, ctx) {
       actorId: ctx.actor.studentId, method: 'ADMIN', note: old + ' -> ' + newRole,
     });
     return { studentId: String(row.data.StudentID), role: newRole, roleTh: ROLE_TH[newRole] };
+  });
+}
+
+/** payload: { studentId, photo: "data:image/jpeg;base64,…" | "" (remove) } */
+function handlePhotoSet_(payload, ctx) {
+  var dataUrl = payload.photo === undefined || payload.photo === null ? '' : String(payload.photo);
+  return HHLock.withLock(function () {
+    var row = HHRepo.findBy('Members', 'StudentID', HHAuth.normalizeStudentId(payload.studentId));
+    if (!row) throw new HHErrors.AppError('NOT_FOUND', 'ไม่พบรหัสนักศึกษานี้');
+    var cfg = HHConfig.get();
+    var covers = HHScan.coversTeam(ctx.actor, row.data.TeamID, unitRows_('ScannerAssignments', row.data.UnitID),
+      HHHours.workDate(new Date(), cfg.WORKDAY_START_HOUR), '');
+    var problem = HHAuth.photoProblem(ctx.actor, row.data, dataUrl, covers);
+    if (problem) throw new HHErrors.AppError('VALIDATION', problem);
+    HHPhotos.set(row.data, dataUrl, ctx.actor.studentId);
+    HHLog.append({ requestId: ctx.requestId, unitId: row.data.UnitID, studentId: row.data.StudentID, action: 'PHOTO_SET',
+      actorId: ctx.actor.studentId, method: 'ADMIN', note: dataUrl ? 'set (' + dataUrl.length + ' chars)' : 'removed' });
+    return { studentId: String(row.data.StudentID), hasPhoto: !!dataUrl };
   });
 }

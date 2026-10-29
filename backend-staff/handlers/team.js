@@ -23,7 +23,8 @@ function handleTeamStatus_(payload, ctx) {
   sessions.forEach(function (s) {
     if (s.Status === 'OPEN' && new Date(s.In).getTime() < overdueBefore) overdue[String(s.StudentID)] = true;
   });
-  result.members.forEach(function (r) { r.overdue = !!overdue[r.studentId]; });
+  var withPhoto = HHPhotos.idsWithPhoto(unitId);
+  result.members.forEach(function (r) { r.overdue = !!overdue[r.studentId]; r.hasPhoto = !!withPhoto[r.studentId]; });
 
   var nick = {};
   members.forEach(function (m) { nick[String(m.StudentID)] = String(m.Nickname); });

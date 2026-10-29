@@ -86,6 +86,7 @@ function memberSummary_(m) {
     teamName: org.team,
     shift: String(m.Shift || ''),
     state: String(m.CurrentState || 'OUT'),
+    photo: HHPhotos.get(m.StudentID),
   };
 }
 

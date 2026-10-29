@@ -49,6 +49,8 @@ var HHPermissions = (function () {
     'team.reports': { minRole: 'head', scope: 'team' },
     'team.report.resolve': { minRole: 'head', scope: 'team' },
     'team.activationCode.issue': { minRole: 'head', scope: 'team' },
+    // Not in spec v4: heads/admins take a member's card photo in person.
+    'photo.set': { minRole: 'head', scope: 'team' },
     'correction.propose': { minRole: 'head', scope: 'team' },
 
     // admin

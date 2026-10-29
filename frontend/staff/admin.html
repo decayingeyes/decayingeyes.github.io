@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../assets/style.css">
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>
+  <script src="../assets/photo.js"></script>
 </head>
 <body>
   <main class="wide">
@@ -277,7 +278,8 @@
         head.appendChild(manage);
         row.appendChild(head);
         row.appendChild(el('div', 'muted small', m.fullName + ' · ' + m.studentId + ' · ' + m.deptName + ' / ' + m.teamName));
-        row.appendChild(el('div', 'small ' + (m.activated ? 'ok' : 'warn'), m.activated ? '✅ เปิดใช้งานบัญชีแล้ว' : '⏳ ยังไม่เปิดใช้งาน'));
+        row.appendChild(el('div', 'small ' + (m.activated ? 'ok' : 'warn'),
+          (m.activated ? '✅ เปิดใช้งานบัญชีแล้ว' : '⏳ ยังไม่เปิดใช้งาน') + (m.hasPhoto ? ' · 🖼️ มีรูปบัตร' : ' · ยังไม่มีรูปบัตร')));
         manage.addEventListener('click', function () {
           openPanel = openPanel === m.studentId ? null : m.studentId;
           renderMembers();
@@ -342,6 +344,31 @@
         });
         panel.appendChild(codeBtn);
         panel.appendChild(codeOut);
+
+        // Card photo (taken in person; not for your own card)
+        if (m.canSetTo.length > 0 || m.role === 'member') {
+          var photoRow = el('div', 'two');
+          var take = el('button', 'btn secondary', m.hasPhoto ? '📷 ถ่ายรูปบัตรใหม่' : '📷 ถ่ายรูปบัตร');
+          take.type = 'button';
+          var del = el('button', 'btn secondary', '🗑️ ลบรูปบัตร');
+          del.type = 'button';
+          del.disabled = !m.hasPhoto;
+          take.addEventListener('click', function () {
+            HHPhoto.capture(m.studentId, function (status, msg) {
+              if (status === 'ok') { HH.say(out, 'บันทึกรูปบัตรแล้ว', 'ok'); loadMembers(); }
+              else HH.say(out, msg, 'bad');
+            });
+          });
+          del.addEventListener('click', function () {
+            HHPhoto.remove(m.studentId, function (status, msg) {
+              if (status === 'ok') { HH.say(out, 'ลบรูปบัตรแล้ว', 'ok'); loadMembers(); }
+              else HH.say(out, msg, 'bad');
+            });
+          });
+          photoRow.appendChild(take);
+          photoRow.appendChild(del);
+          panel.appendChild(photoRow);
+        }
         panel.appendChild(out);
         return panel;
       }

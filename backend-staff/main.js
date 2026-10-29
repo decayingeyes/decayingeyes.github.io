@@ -36,6 +36,7 @@ function handlers_() {
     'roster.import': handleRosterImport_,
     'roster.list': handleRosterList_,
     'role.set': handleRoleSet_,
+    'photo.set': handlePhotoSet_,
   };
 }
 

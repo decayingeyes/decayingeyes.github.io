@@ -30,10 +30,10 @@
       <div id="reports"></div>
     </section>
 
-    <h2>สมาชิก</h2>
+    <h2 id="members-h">สมาชิก</h2>
     <div class="filters" id="filters"></div>
     <div id="list"></div>
-    <a class="btn" href="scan.html" style="margin-top:16px">📷 ไปหน้าสแกน</a>
+    <a class="btn" id="to-scan" href="scan.html" style="margin-top:16px">📷 ไปหน้าสแกน</a>
   </main>
 
   <script>
@@ -109,6 +109,13 @@
         HH.call('team.status').then(function (res) {
           if (!res.ok) {
             if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return; }
+            if (res.error.code === 'FORBIDDEN') {
+              HH.say($('meta'), 'หน้านี้สำหรับหัวหน้า รองหัวหน้า และแอดมินเท่านั้น', 'bad');
+              $('counts').hidden = true;
+              $('to-scan').hidden = true;
+              $('members-h').hidden = true;
+              return;
+            }
             HH.say($('meta'), HH.errorText(res), 'bad');
             return;
           }

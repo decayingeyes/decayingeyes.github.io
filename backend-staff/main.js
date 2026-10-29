@@ -44,6 +44,21 @@ function handlers_() {
   };
 }
 
+/** Actions that change who is on the roster: the summary tabs must list newcomers too, not only scans. */
+var ROSTER_CHANGING_ = ['auth.signup', 'signup.review', 'role.set', 'roster.import'];
+
+function withRosterRefresh_(map) {
+  ROSTER_CHANGING_.forEach(function (name) {
+    var inner = map[name];
+    map[name] = function (payload, ctx) {
+      var out = inner(payload, ctx);
+      HHSummarySheets.markDirty();
+      return out;
+    };
+  });
+  return map;
+}
+
 function doPost(e) {
   var raw = e && e.postData ? e.postData.contents : '';
   return json_(HHRouter.handle(raw, routerDeps_()));
@@ -63,7 +78,7 @@ function routerDeps_() {
     env: HHProps.env() || 'UNCONFIGURED',
     newRequestId: function () { return HHIds.newRequestId(); },
     resolveSession: HHSessions.resolve,
-    handlers: handlers_(),
+    handlers: withRosterRefresh_(handlers_()),
     logError: HHErrorLog.write,
   };
 }

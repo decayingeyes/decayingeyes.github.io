@@ -1,0 +1,6 @@
+node_modules/
+# generated per push by tools/clasp-env.js
+backend-staff/.clasp.json
+backend-booking/.clasp.json
+.clasprc.json
+*.log

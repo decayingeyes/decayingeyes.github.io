@@ -1,0 +1,20 @@
+{
+  "name": "haunted-house-staff",
+  "private": true,
+  "description": "Event staff attendance (System B) + haunted house ticket booking (System A).",
+  "scripts": {
+    "test": "node --test \"tests/core/**/*.test.js\"",
+    "test:api": "node --test \"tests/api/**/*.test.js\"",
+    "push:test": "node tools/clasp-env.js test push",
+    "push:prod": "node tools/clasp-env.js prod push",
+    "deploy:test": "node tools/clasp-env.js test deploy",
+    "deploy:prod": "node tools/clasp-env.js prod deploy",
+    "open:test": "node tools/clasp-env.js test open-script"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
+  }
+}

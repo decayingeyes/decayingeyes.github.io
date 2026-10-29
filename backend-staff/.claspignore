@@ -1,0 +1,6 @@
+**/**
+!appsscript.json
+!*.js
+!core/*.js
+!adapters/*.js
+!handlers/*.js

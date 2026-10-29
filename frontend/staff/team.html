@@ -30,6 +30,26 @@
       <div id="reports"></div>
     </section>
 
+    <section id="propose-box" hidden>
+      <h2>✏️ ขอแก้ไขชั่วโมง</h2>
+      <form class="card" id="propose">
+        <p class="muted small">ส่งให้แอดมินอนุมัติ (ชั่วโมงจะเปลี่ยนเมื่ออนุมัติแล้ว) · ขอแก้ของตัวเองไม่ได้</p>
+        <label for="c-member">สมาชิก</label>
+        <select id="c-member" required></select>
+        <label for="c-date">วันทำงาน</label>
+        <input id="c-date" type="date" required>
+        <div class="two">
+          <div><label for="c-in">เวลาเข้าที่ถูกต้อง</label><input id="c-in" type="time" required></div>
+          <div><label for="c-out">เวลาออกที่ถูกต้อง</label><input id="c-out" type="time" required></div>
+        </div>
+        <label for="c-reason">เหตุผล</label>
+        <input id="c-reason" maxlength="300" placeholder="เช่น ลืมสแกนออก เห็นอยู่ถึง 21:00" required>
+        <input id="c-report" type="hidden">
+        <button class="btn" type="submit" id="c-send">ส่งขอแก้ไข</button>
+        <p class="msg" id="c-msg"></p>
+      </form>
+    </section>
+
     <h2 id="members-h">สมาชิก</h2>
     <div class="filters" id="filters"></div>
     <div id="list"></div>
@@ -59,6 +79,7 @@
 
       function render(d) {
         last = d;
+        fillMembers(d);
         $('meta').textContent = 'วันทำงาน ' + d.workDate + ' · อัปเดตล่าสุด ' + d.serverTime + ' น. · รีเฟรชเองทุก 10 วินาที';
         $('counts').hidden = false;
         var rows = d.members.filter(function (m) { return !teamFilter || m.teamId === teamFilter; });
@@ -152,6 +173,18 @@
             var out = el('p', 'msg');
             f.appendChild(input);
             f.appendChild(btn);
+            // Turn the report into a correction proposal (prefills the form below).
+            var fix = el('button', 'btn secondary', 'ส่งขอแก้ไขชั่วโมง');
+            fix.type = 'button';
+            fix.addEventListener('click', function () {
+              $('c-member').value = x.studentId;
+              $('c-date').value = x.workDate;
+              $('c-report').value = x.reportId;
+              $('c-reason').value = x.message.slice(0, 300);
+              $('propose-box').scrollIntoView({ behavior: 'smooth' });
+              $('c-in').focus();
+            });
+            f.appendChild(fix);
             f.addEventListener('submit', function (e) {
               e.preventDefault();
               HH.busy(btn, true, '…');
@@ -167,6 +200,38 @@
           });
         });
       }
+
+      // ---- correction proposals (heads and admins) ----
+      function fillMembers(d) {
+        var sel = $('c-member');
+        if (sel.options.length > 0) return;
+        d.members.slice().sort(function (a, b) { return a.nickname.localeCompare(b.nickname, 'th'); }).forEach(function (m) {
+          var o = el('option', '', m.nickname + ' · ' + m.studentId + ' · ' + m.teamName);
+          o.value = m.studentId;
+          sel.appendChild(o);
+        });
+        if (!$('c-date').value) $('c-date').value = d.workDate;
+      }
+
+      HH.call('auth.me').then(function (res) {
+        if (res.ok && ['head', 'unit_admin', 'super_admin'].indexOf(res.data.profile.role) !== -1) $('propose-box').hidden = false;
+      });
+
+      $('propose').addEventListener('submit', function (e) {
+        e.preventDefault();
+        HH.busy($('c-send'), true, 'กำลังส่ง…');
+        HH.call('correction.propose', {
+          studentId: $('c-member').value, workDate: $('c-date').value, in: $('c-in').value, out: $('c-out').value,
+          reason: $('c-reason').value, reportId: $('c-report').value,
+        }).then(function (res) {
+          HH.busy($('c-send'), false);
+          if (!res.ok) { HH.say($('c-msg'), HH.errorText(res), 'bad'); return; }
+          HH.say($('c-msg'), 'ส่งให้แอดมินแล้ว (' + res.data.appliesTo + ')', 'ok');
+          $('c-reason').value = '';
+          $('c-report').value = '';
+          loadInbox();
+        });
+      });
 
       load();
       loadInbox();

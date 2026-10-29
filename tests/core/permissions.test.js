@@ -6,7 +6,7 @@ const P = require('../../backend-staff/core/permissions');
 const SPEC_ACTIONS = [
   'health',
   'auth.activate', 'auth.login', 'auth.logout', 'auth.me',
-  'me.card', 'me.today', 'me.history', 'me.schedule', 'me.reports', 'me.report.create',
+  'me.card', 'me.today', 'me.history', 'me.schedule', 'me.reports', 'me.report.create', 'me.selfReport',
   'scan.lookup', 'scan.confirm',
   'team.status', 'team.reports', 'team.report.resolve', 'team.activationCode.issue', 'correction.propose',
   'correction.list', 'correction.approve', 'correction.reject', 'roster.import', 'roster.update',

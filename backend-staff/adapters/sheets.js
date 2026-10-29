@@ -75,6 +75,7 @@ var HHSheets = (function () {
         sh.setFrozenRows(1);
         protectHeader_(sh, headers.length);
       } else {
+        addMissingTrailingHeaders_(sh, headers);
         problems = problems.concat(HHSchema.compareHeaders(name, headerRow(sh)));
       }
       HHSchema.textColumnIndexes(name).forEach(function (col) {
@@ -87,6 +88,24 @@ var HHSheets = (function () {
     removeDefaultSheet_(book, created);
     clearSchemaCache();
     return { created: created, problems: problems };
+  }
+
+  /**
+   * Migration for columns added at the end of a sheet's schema: when the
+   * existing header row matches the start of the expected headers, append the
+   * missing ones. Never reorders or renames existing columns.
+   */
+  function addMissingTrailingHeaders_(sh, headers) {
+    var actual = headerRow(sh).map(function (h) { return String(h).trim(); });
+    while (actual.length > 0 && actual[actual.length - 1] === '') actual.pop();
+    if (actual.length >= headers.length) return;
+    for (var i = 0; i < actual.length; i++) if (actual[i] !== headers[i]) return;
+    var missing = headers.slice(actual.length);
+    sh.getRange(1, actual.length + 1, 1, missing.length).setValues([missing]).setFontWeight('bold');
+    sh.getProtections(SpreadsheetApp.ProtectionType.RANGE).forEach(function (p) {
+      if (p.getDescription() === 'Header (do not edit)') p.remove();
+    });
+    protectHeader_(sh, headers.length);
   }
 
   function protectHeader_(sh, width) {

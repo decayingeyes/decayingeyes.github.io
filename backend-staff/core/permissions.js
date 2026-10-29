@@ -37,6 +37,8 @@ var HHPermissions = (function () {
     'me.schedule': { minRole: 'member', scope: 'self' },
     'me.reports': { minRole: 'member', scope: 'self' },
     'me.report.create': { minRole: 'member', scope: 'self' },
+    // Not in spec v4: heads/deputies report themselves in/out; counted only after admin approval.
+    'me.selfReport': { minRole: 'deputy', scope: 'self' },
 
     // scan
     'scan.lookup': { minRole: 'deputy', scope: 'team' },

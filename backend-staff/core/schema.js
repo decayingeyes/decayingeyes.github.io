@@ -26,6 +26,8 @@ var HHSchema = (function () {
     Corrections: [
       'CorrectionID', 'UnitID', 'TargetStudentID', 'SessionID', 'ProposedIn', 'ProposedOut',
       'Reason', 'ProposedBy', 'ProposedAt', 'Status', 'ReviewedBy', 'ReviewedAt', 'ReviewNote',
+      // Added after spec v4 (see CHANGELOG): CORRECTION | SELF_REPORT, and the session's work date.
+      'Type', 'WorkDate', 'ReportID',
     ],
     Reports: ['ReportID', 'UnitID', 'StudentID', 'WorkDate', 'Message', 'Status', 'ResolvedBy', 'ResolvedNote'],
     // Spec lists "StudentID or TeamID" as one column; split into two (one is filled). See CHANGELOG.

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>หน้าแอดมิน — ระบบสตาฟ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
+  <link rel="stylesheet" href="../assets/style.css">
+  <script src="../config.js"></script>
+  <script src="../assets/api.js"></script>
+</head>
+<body>
+  <main class="wide">
+    <div class="scan-top">
+      <h1>🛠️ หน้าแอดมิน</h1>
+      <a href="portal.html" class="muted">กลับ</a>
+    </div>
+    <p class="muted" id="meta">กำลังโหลด…</p>
+
+    <section id="body" hidden>
+      <h2>✅ รออนุมัติ</h2>
+      <p class="muted small">คำขอแก้ไขชั่วโมงจากหัวหน้า และการรายงานตัวเองของหัวหน้า — ชั่วโมงจะนับเมื่ออนุมัติแล้วเท่านั้น</p>
+      <div id="pending"></div>
+
+      <h2>🔒 ปิดงวด</h2>
+      <div class="card">
+        <p class="muted small">ปิดแล้วจะสแกน/แก้ไขชั่วโมงในช่วงนี้ไม่ได้ และระบบจะสร้างไฟล์สรุปชั่วโมงให้ (เปิดคืนได้เฉพาะผู้ดูแลระบบสูงสุด)</p>
+        <div class="two">
+          <div><label for="p-start">ตั้งแต่วันที่</label><input id="p-start" type="date"></div>
+          <div><label for="p-end">ถึงวันที่</label><input id="p-end" type="date"></div>
+        </div>
+        <button class="btn" id="close-period">ปิดงวดและส่งออก</button>
+        <p class="msg" id="p-msg"></p>
+      </div>
+      <div id="periods"></div>
+
+      <h2>📤 ส่งออกชั่วโมง (CSV)</h2>
+      <div class="card">
+        <div class="two">
+          <div><label for="e-start">ตั้งแต่วันที่</label><input id="e-start" type="date"></div>
+          <div><label for="e-end">ถึงวันที่</label><input id="e-end" type="date"></div>
+        </div>
+        <button class="btn secondary" id="export">ดาวน์โหลด CSV</button>
+        <p class="msg" id="e-msg"></p>
+      </div>
+
+      <h2>🕘 พิจารณาล่าสุด</h2>
+      <div id="recent"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      if (!HH.requireLogin()) return;
+      var $ = function (id) { return document.getElementById(id); };
+      function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+      var TYPE_TH = { CORRECTION: '✏️ ขอแก้ไขชั่วโมง', SELF_REPORT: '🙋 รายงานตัวเอง' };
+      var STATUS_TH = { APPROVED: 'อนุมัติแล้ว', REJECTED: 'ปฏิเสธ', PENDING: 'รออนุมัติ' };
+
+      function download(name, text) {
+        var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+        var a = el('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      }
+
+      function correctionCard(c, withActions) {
+        var card = el('div', 'card');
+        var head = el('div', 'mr-head');
+        head.appendChild(el('b', '', TYPE_TH[c.type] + ' · ' + c.nickname + ' (' + c.teamName + ')'));
+        head.appendChild(el('span', 'badge ' + c.status.toLowerCase(), STATUS_TH[c.status] || c.status));
+        card.appendChild(head);
+        card.appendChild(el('div', 'muted small', c.studentId + ' · วันที่ ' + c.workDate + ' · เสนอโดย ' + c.proposedBy));
+        if (c.current) {
+          card.appendChild(el('div', 'mr-session', 'ปัจจุบัน: ' + c.current.in + ' → ' + (c.current.out || '?') + ' · นับ ' + c.current.countedHours + ' ชม.'));
+        } else {
+          card.appendChild(el('div', 'mr-session', 'ปัจจุบัน: ไม่มีรอบเข้างาน (จะเพิ่มรอบใหม่)'));
+        }
+        card.appendChild(el('div', 'mr-session', '➡️ ขอเป็น: ' + c.proposedIn + ' → ' + c.proposedOut));
+        card.appendChild(el('div', '', 'เหตุผล: ' + c.reason));
+        if (c.reviewNote) card.appendChild(el('div', 'muted small', 'บันทึก: ' + c.reviewNote + (c.reviewedBy ? ' (' + c.reviewedBy + ')' : '')));
+        if (!withActions) return card;
+        if (!c.canReview) {
+          card.appendChild(el('p', 'warn small', 'คุณพิจารณาคำขอนี้ไม่ได้ (เป็นผู้เสนอหรือเป็นเจ้าของชั่วโมง) — ต้องให้แอดมินคนอื่น'));
+          return card;
+        }
+        var note = el('input');
+        note.placeholder = 'บันทึก (จำเป็นถ้าปฏิเสธ)';
+        note.maxLength = 300;
+        var row = el('div', 'resolve');
+        var ok = el('button', 'btn in', 'อนุมัติ');
+        var no = el('button', 'btn secondary', 'ปฏิเสธ');
+        var out = el('p', 'msg');
+        row.appendChild(ok);
+        row.appendChild(no);
+        card.appendChild(note);
+        card.appendChild(row);
+        card.appendChild(out);
+        [[ok, 'correction.approve'], [no, 'correction.reject']].forEach(function (pair) {
+          pair[0].addEventListener('click', function () {
+            HH.busy(pair[0], true, '…');
+            HH.call(pair[1], { correctionId: c.correctionId, note: note.value }).then(function (res) {
+              HH.busy(pair[0], false);
+              if (!res.ok) { HH.say(out, HH.errorText(res), 'bad'); return; }
+              load();
+            });
+          });
+        });
+        return card;
+      }
+
+      function load() {
+        HH.call('correction.list').then(function (res) {
+          if (!res.ok) {
+            if (res.error.code === 'UNAUTHENTICATED') { HH.requireLogin(); return; }
+            HH.say($('meta'), res.error.code === 'FORBIDDEN' ? 'หน้านี้สำหรับแอดมินแผนกเท่านั้น' : HH.errorText(res), 'bad');
+            return;
+          }
+          var d = res.data;
+          $('meta').textContent = 'รออนุมัติ ' + d.pending.length + ' รายการ';
+          $('body').hidden = false;
+          var p = $('pending');
+          p.innerHTML = '';
+          if (d.pending.length === 0) p.appendChild(el('p', 'muted', 'ไม่มีรายการรออนุมัติ 🎉'));
+          d.pending.forEach(function (c) { p.appendChild(correctionCard(c, true)); });
+          var r = $('recent');
+          r.innerHTML = '';
+          d.recent.forEach(function (c) { r.appendChild(correctionCard(c, false)); });
+          var per = $('periods');
+          per.innerHTML = '';
+          d.periods.forEach(function (x) {
+            var card = el('div', 'card');
+            var head = el('div', 'mr-head');
+            head.appendChild(el('b', '', x.startDate + ' ถึง ' + x.endDate));
+            head.appendChild(el('span', 'badge ' + (x.status === 'CLOSED' ? 'locked' : 'open'), x.status === 'CLOSED' ? 'ปิดแล้ว' : 'เปิดคืนแล้ว'));
+            card.appendChild(head);
+            card.appendChild(el('div', 'muted small', 'ปิดโดย ' + x.closedBy + (x.reopenReason ? ' · เหตุผลที่เปิดคืน: ' + x.reopenReason : '')));
+            if (x.exportLink) {
+              var a = el('a', '', 'เปิดไฟล์สรุปในชีต');
+              a.href = x.exportLink;
+              a.target = '_blank';
+              a.rel = 'noopener';
+              card.appendChild(a);
+            }
+            per.appendChild(card);
+          });
+        });
+      }
+
+      $('close-period').addEventListener('click', function () {
+        var btn = $('close-period');
+        HH.busy(btn, true, 'กำลังปิดงวด…');
+        HH.call('period.close', { startDate: $('p-start').value, endDate: $('p-end').value }).then(function (res) {
+          HH.busy(btn, false);
+          if (!res.ok) { HH.say($('p-msg'), HH.errorText(res), 'bad'); return; }
+          HH.say($('p-msg'), 'ปิดงวดแล้ว (' + res.data.members + ' คน) — ดาวน์โหลดไฟล์สรุปให้แล้ว', 'ok');
+          download(res.data.filename, res.data.csv);
+          load();
+        });
+      });
+
+      $('export').addEventListener('click', function () {
+        var btn = $('export');
+        HH.busy(btn, true, 'กำลังสร้างไฟล์…');
+        HH.call('export.summary', { startDate: $('e-start').value, endDate: $('e-end').value }).then(function (res) {
+          HH.busy(btn, false);
+          if (!res.ok) { HH.say($('e-msg'), HH.errorText(res), 'bad'); return; }
+          HH.say($('e-msg'), 'ดาวน์โหลดแล้ว (' + res.data.members + ' คน)', 'ok');
+          download(res.data.filename, res.data.csv);
+        });
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

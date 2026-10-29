@@ -19,6 +19,14 @@
       <b>🛡️ เครื่องมือหัวหน้า</b>
       <a class="btn" href="scan.html">📷 สแกนเข้า-ออกงานให้สมาชิก</a>
       <a class="btn secondary" href="team.html">👥 สถานะทีมวันนี้</a>
+      <a class="btn secondary" href="admin.html" id="to-admin" hidden>🛠️ หน้าแอดมิน (อนุมัติ / ปิดงวด / ส่งออก)</a>
+      <details class="self-report">
+        <summary>🙋 ไม่มีใครสแกนให้? รายงานตัวเอง</summary>
+        <p class="muted small">ใช้เมื่อหาคนสแกนให้ไม่ได้จริงๆ · บันทึกเวลาจากเซิร์ฟเวอร์ · ชั่วโมงจะนับเมื่อแอดมินยืนยันแล้วเท่านั้น</p>
+        <input id="self-reason" maxlength="300" placeholder="เหตุผล เช่น มาเปิดบ้านก่อน ยังไม่มีใครมา">
+        <button class="btn secondary" id="self-btn" type="button">รายงานตัวเข้างาน</button>
+        <p class="msg" id="self-msg"></p>
+      </details>
     </div>
     <div class="card today no-print" id="today" hidden>
       <div class="muted small">วันนี้ (<span id="today-date"></span>)</div>
@@ -85,6 +93,7 @@
         card = res.data;
         HHCard.renderHtml(card);
         document.getElementById('to-scan').hidden = card.role === 'member';
+        document.getElementById('to-admin').hidden = card.role !== 'unit_admin' && card.role !== 'super_admin';
         msg.hidden = true;
         document.getElementById('card').hidden = false;
         document.getElementById('actions').hidden = false;
@@ -107,6 +116,7 @@
           $('today-date').textContent = res.data.workDate;
           $('today-text').textContent = res.data.text;
           $('today-text').className = 'today-text ' + KIND_CLS[res.data.kind];
+          $('self-btn').textContent = res.data.kind === 'IN' ? 'รายงานตัวออกงาน' : 'รายงานตัวเข้างาน';
           if (!$('r-date').value) $('r-date').value = res.data.workDate;
         });
       }
@@ -166,6 +176,19 @@
           HH.say($('r-msg-out'), 'ส่งเรื่องแล้ว หัวหน้าจะตรวจสอบให้', 'ok');
           $('r-msg').value = '';
           loadReports();
+        });
+      });
+
+      $('self-btn').addEventListener('click', function () {
+        HH.busy($('self-btn'), true, 'กำลังบันทึก…');
+        HH.call('me.selfReport', { reason: $('self-reason').value }).then(function (res) {
+          HH.busy($('self-btn'), false);
+          if (!res.ok) { HH.say($('self-msg'), HH.errorText(res), 'bad'); return; }
+          HH.say($('self-msg'), (res.data.action === 'IN' ? 'รายงานตัวเข้า ' : 'รายงานตัวออก ') + res.data.time +
+            ' แล้ว — รอแอดมินยืนยันชั่วโมง', 'ok');
+          $('self-reason').value = '';
+          loadToday();
+          loadHistory();
         });
       });
 

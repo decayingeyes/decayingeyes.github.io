@@ -193,3 +193,17 @@ main.wide { max-width: 760px; }
 .alert-row { border-left: 5px solid var(--warn); }
 .resolve { display: flex; gap: 8px; margin-top: 8px; }
 .resolve .btn { width: auto; white-space: nowrap; padding: 12px 16px; }
+
+/* M4: forms, admin */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+select {
+  width: 100%; padding: 14px; border: 1px solid #33333d; border-radius: 10px;
+  background: #121217; color: var(--text); font: inherit; font-size: 17px;
+}
+.btn.in { background: var(--ok); color: #fff; }
+details.self-report { background: #1f1f26; border-radius: 12px; padding: 10px 12px; }
+details.self-report summary { cursor: pointer; font-weight: 700; }
+details.self-report .btn { margin-top: 8px; }
+.badge.approved { background: #1f3b2b; color: #7be3a6; }
+.badge.rejected { background: #4a1f22; color: #ff9da0; }
+.badge.pending { background: #4a3a12; color: #ffd47a; }

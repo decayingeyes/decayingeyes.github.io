@@ -161,10 +161,17 @@ function handleScanConfirm_(payload, ctx) {
       var inTime = new Date(open.data.In);
       var already = countedOnDate_(m.StudentID, String(open.data.WorkDate), String(open.data.SessionID));
       var c = HHHours.countedHours(inTime, now, already, d.cfg);
+      // A self-reported check-in stays unverified: 0 h until an admin approves it.
+      var selfIn = HHCorrections.isSelfSession(open.data);
       HHRepo.update('WorkSessions', open.row, {
-        Out: now, RawMinutes: c.rawMinutes, CountedHours: c.countedHours, ScannedOutBy: ctx.actor.studentId,
-        Status: 'COMPLETE', Note: [open.data.Note, reason ? 'OUT: ' + reason : ''].filter(String).join(' | '),
+        Out: now, RawMinutes: c.rawMinutes, CountedHours: selfIn ? 0 : c.countedHours, ScannedOutBy: ctx.actor.studentId,
+        Status: selfIn ? 'NEEDS_REVIEW' : 'COMPLETE',
+        Note: [open.data.Note, reason ? 'OUT: ' + reason : ''].filter(String).join(' | '),
       });
+      if (selfIn) {
+        createSelfReportCorrection_(open.data, now, 'รายงานตัวเข้าเอง, สแกนออกโดย ' + ctx.actor.nickname);
+        c.countedHours = 0;
+      }
       HHRepo.update('Members', row.row, { CurrentState: 'OUT', OpenSessionID: '' });
       result.countedHours = c.countedHours;
       result.rawMinutes = c.rawMinutes;

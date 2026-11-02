@@ -2,13 +2,14 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-hgRz4Z8cyUrtKnItISYZInZao+ZgFPvBGp57pqfy1+8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>สแกนเข้า-ออกงาน — ระบบสตาฟ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap">
   <link rel="stylesheet" href="../assets/style.css">
-  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="../assets/vendor/zxing.min.js"></script>
+  <script src="../assets/vendor/jsQR.js"></script>
   <script src="../assets/scanner.js"></script>
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>

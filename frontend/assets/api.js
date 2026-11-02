@@ -29,7 +29,7 @@
   function rememberRole(action, res) {
     if (!res || !res.ok || !res.data) return;
     var role = null;
-    if (action === 'auth.login' || action === 'auth.activate' || action === 'auth.me') role = res.data.profile && res.data.profile.role;
+    if (action === 'auth.login' || action === 'auth.activate' || action === 'auth.twoFactor' || action === 'auth.me') role = res.data.profile && res.data.profile.role;
     if (action === 'me.card') role = res.data.role;
     if (role) {
       var changed = storage.get(roleKey) !== role;
@@ -42,6 +42,33 @@
     return (cfg.envs[env] && cfg.envs[env].apiUrl) || '';
   }
 
+  // ---- this browser's identity for login lockouts (see HHAuth.attemptLocked) ----
+  var LOGIN_ACTIONS = { 'auth.login': true, 'auth.activate': true, 'auth.signup': true, 'auth.twoFactor': true };
+
+  function deviceId() {
+    var id = storage.get('hh.device');
+    if (/^[0-9a-f]{32}$/.test(id || '')) return id;
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    id = Array.prototype.map.call(bytes, function (b) { return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+    storage.set('hh.device', id);
+    return id;
+  }
+
+  function trustKey(studentId) {
+    return 'hh.trust.' + env + '.' + String(studentId || '').trim().toUpperCase();
+  }
+
+  function withDevice(payload) {
+    return Object.assign({}, payload, { deviceId: deviceId(), deviceTrust: storage.get(trustKey(payload.studentId)) || '' });
+  }
+
+  function rememberDevice(res) {
+    if (res && res.ok && res.data && res.data.deviceTrust && res.data.profile) {
+      storage.set(trustKey(res.data.profile.studentId), res.data.deviceTrust);
+    }
+  }
+
   /**
    * Call one backend action. Always resolves to the response envelope;
    * network failures become { ok:false, error:{ code:'NETWORK', messageTh } }.
@@ -51,7 +78,7 @@
     if (!url) {
       return Promise.resolve({ ok: false, error: { code: 'NOT_CONFIGURED', messageTh: 'ยังไม่ได้ใส่ที่อยู่ระบบหลังบ้านใน config.js' } });
     }
-    var body = { action: action, payload: payload || {} };
+    var body = { action: action, payload: LOGIN_ACTIONS[action] ? withDevice(payload || {}) : (payload || {}) };
     var token = storage.get(tokenKey);
     if (token) body.token = token;
     return fetch(url, {
@@ -70,6 +97,7 @@
           storage.remove(roleKey);
         }
         rememberRole(action, res);
+        if (LOGIN_ACTIONS[action]) rememberDevice(res);
         return res;
       })
       .catch(function () {

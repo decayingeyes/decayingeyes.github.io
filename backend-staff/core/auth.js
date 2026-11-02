@@ -159,15 +159,83 @@ var HHAuth = (function () {
     return passwordProblem(f.password, minPasswordLength);
   }
 
+  function normalizeName_(s) {
+    return String(s === undefined || s === null ? '' : s).trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  /** The form's first and last name equal the roster row, ignoring case and extra spaces. */
+  function namesMatch(form, row) {
+    var first = normalizeName_(form.firstName);
+    var last = normalizeName_(form.lastName);
+    return !!first && !!last && first === normalizeName_(row.FirstName) && last === normalizeName_(row.LastName);
+  }
+
   /**
-   * What a sign-up may do with an existing Members row for the same id.
-   * @return {{ok: boolean, overwrite: boolean, messageTh: (string|null)}}
+   * What a sign-up may do, given the Members row for the same id (decision
+   * 2026-11-03): the shared join code activates at once only when the person is
+   * already on the roster with a matching name. Anyone else waits for an admin,
+   * so a leaked code cannot be used to take a student id that is not on the list.
+   * Roster rows with a position must use a personal activation code instead,
+   * because a join code plus a known name is too weak to claim a head's account.
+   * @param {Object|null} existing Members row
+   * @param {{firstName, lastName}} form
+   * @param {'none'|'match'|'wrong'} join result of joinCodeResult
+   * @return {{ok: boolean, mode: (string|null), status: (string|null), messageTh: (string|null)}}
+   *         mode: 'new' | 'overwrite' | 'claim'
    */
-  function signupAgainst(existing) {
-    if (!existing) return { ok: true, overwrite: false, messageTh: null };
-    if (existing.Status === 'REJECTED') return { ok: true, overwrite: true, messageTh: null };
-    if (existing.Status === 'PENDING') return { ok: false, overwrite: false, messageTh: 'รหัสนี้สมัครไว้แล้ว รอแอดมินอนุมัติ' };
-    return { ok: false, overwrite: false, messageTh: 'รหัสนี้มีบัญชีอยู่แล้ว ให้เข้าสู่ระบบ หรือขอรหัสเปิดใช้งานใหม่จากหัวหน้า' };
+  function signupAgainst(existing, form, join) {
+    function refuse(messageTh) { return { ok: false, mode: null, status: null, messageTh: messageTh }; }
+    if (!existing) return { ok: true, mode: 'new', status: 'PENDING', messageTh: null };
+    if (existing.Status === 'REJECTED') return { ok: true, mode: 'overwrite', status: 'PENDING', messageTh: null };
+    if (existing.Status === 'PENDING') return refuse('รหัสนี้สมัครไว้แล้ว รอแอดมินอนุมัติ');
+    if (existing.Status === 'ACTIVE' && !existing.PasswordHash) {
+      if (join === 'match' && existing.Role === 'member' && namesMatch(form || {}, existing)) {
+        return { ok: true, mode: 'claim', status: 'ACTIVE', messageTh: null };
+      }
+      return refuse('ข้อมูลไม่ตรงกับรายชื่อ กรุณาตรวจชื่อ นามสกุล และรหัสเข้าร่วมงาน หรือขอรหัสเปิดใช้งานจากหัวหน้า');
+    }
+    return refuse('รหัสนี้มีบัญชีอยู่แล้ว ให้เข้าสู่ระบบ หรือขอรหัสเปิดใช้งานใหม่จากหัวหน้า');
+  }
+
+  var TWO_FACTOR_ROLES = { unit_admin: true, super_admin: true };
+
+  /** Roles that can change other people's data must pass a second login step. */
+  function requiresTwoFactor(role, config) {
+    return !!TWO_FACTOR_ROLES[role] && !(config && config.REQUIRE_2FA === false);
+  }
+
+  /**
+   * Does a stored login still count for this role? A login made before the
+   * second step was set up does not (for example an admin session from before
+   * this feature, or a member session of someone just promoted to admin).
+   * @param {Date|string} sessionCreatedAt
+   * @param {{EnabledAt}|null} twoFactorRow
+   */
+  function sessionPassesTwoFactor(role, config, sessionCreatedAt, twoFactorRow) {
+    if (!requiresTwoFactor(role, config)) return true;
+    if (!twoFactorRow || !twoFactorRow.EnabledAt) return false;
+    // Whole seconds: both values are written within the same request at enrolment.
+    var created = Math.floor(new Date(sessionCreatedAt).getTime() / 1000);
+    var enabled = Math.floor(new Date(twoFactorRow.EnabledAt).getTime() / 1000);
+    return created >= enabled;
+  }
+
+  /** A browser's random id; anything else counts as one shared "unknown device". */
+  function normalizeDeviceId(raw) {
+    var s = String(raw === undefined || raw === null ? '' : raw);
+    return /^[0-9a-f]{32}$/.test(s) ? s : 'unknown';
+  }
+
+  /**
+   * Lockout that a stranger cannot use against someone else. Wrong guesses lock
+   * the browser that made them. Across all browsers there is a second, higher
+   * limit that stops guessing from many devices, and a browser this person has
+   * logged in from before skips that limit, so they can still get in.
+   * @return {boolean} true when this attempt must be refused
+   */
+  function attemptLocked(deviceFailures, accountFailures, trustedDevice, maxPerDevice, maxPerAccount) {
+    if ((deviceFailures || 0) >= maxPerDevice) return true;
+    return !trustedDevice && (accountFailures || 0) >= maxPerAccount;
   }
 
   /**
@@ -186,6 +254,11 @@ var HHAuth = (function () {
     joinCodeResult: joinCodeResult,
     signupProblem: signupProblem,
     signupAgainst: signupAgainst,
+    namesMatch: namesMatch,
+    requiresTwoFactor: requiresTwoFactor,
+    sessionPassesTwoFactor: sessionPassesTwoFactor,
+    normalizeDeviceId: normalizeDeviceId,
+    attemptLocked: attemptLocked,
     MAX_PHOTO_CHARS: MAX_PHOTO_CHARS,
     photoProblem: photoProblem,
     roleChangeProblem: roleChangeProblem,

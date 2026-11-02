@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-RTuUh5LHNa/zSffts+3/Zg6a2Iff9I8YnRfDl2bfOWw='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>สมัครสมาชิก — ระบบสตาฟ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +14,7 @@
 <body>
   <main>
     <h1>🎃 สมัครสมาชิก</h1>
-    <p class="muted">กรอกข้อมูลตามจริง · มี<b>รหัสเข้าร่วมงาน</b>จากหัวหน้า = เข้าใช้ได้ทันที · ไม่มี = เว้นว่างไว้แล้วรอแอดมินอนุมัติ</p>
+    <p class="muted">กรอกชื่อและนามสกุลให้ตรงกับรายชื่อสตาฟ · มีชื่อในรายชื่อและมี<b>รหัสเข้าร่วมงาน</b> = เข้าใช้ได้ทันที · นอกนั้นรอแอดมินอนุมัติ</p>
 
     <form id="form" autocomplete="on">
       <label for="sid">รหัสนักศึกษา</label>
@@ -67,7 +68,7 @@
           HH.busy($('submit'), false);
           if (!res.ok) { HH.say($('msg'), HH.errorText(res), 'bad'); return; }
           if (res.data.status === 'ACTIVE' && res.data.token) {
-            // Joined with the shared code: already logged in.
+            // On the roster with the shared code: already logged in.
             HH.token.set(res.data.token);
             window.location.replace('portal.html');
             return;

@@ -40,3 +40,11 @@
 - Join code typed on the activation page (no such member) now returns USE_SIGNUP and the page forwards to register.html with the code and student id prefilled. Join-code failures are rate-limited per student id instead of globally.
 - Summary tabs are now marked for rebuild after roster changes (signup, signup review, role change, roster import), not only after scans.
 - Sheet menu "ล้างประวัติการเข้างานทั้งหมด (สำรองไว้ก่อน)": copies each history sheet (WorkSessions, Corrections, Reports, Alerts, Periods, DashboardCache) to a hidden backup tab, clears data rows, sets everyone OUT. Members/passwords/photos/config/Log kept. Used on TEST and PROD 2026-10-30.
+
+## 0.6.0 — 2026-11-03 (security, before the Bakadin 70 expansion; API 0.2.0)
+- **Sign-up (owner decision 2026-11-03):** the shared join code now activates at once only for someone already on the roster, as a plain member, with a matching first and last name. Everyone else waits for admin approval. Roster rows with a position need a personal activation code.
+- **Second login step for admins (owner decision 2026-11-03):** `auth.login` and `auth.activate` return a challenge instead of a token for `unit_admin` and `super_admin`; `auth.twoFactor` (public, needs the challenge) exchanges it after an authenticator-app code or a one-time recovery code. New sheet `TwoFactor`. Admin logins made before set-up stop working. `REQUIRE_2FA` in Config. Lost phone: sheet menu "ล้างการยืนยัน 2 ชั้น".
+- **Lockouts:** wrong passwords lock the browser that typed them. Across browsers `LOGIN_ACCOUNT_MAX_FAILURES` applies, which a browser the person has logged in from before skips (signed `deviceTrust`), so a stranger cannot lock someone out.
+- **New password ends every older login** of that member.
+- **Daily backup:** `backupTick` at 03:00 copies the spreadsheet to a private Drive folder and keeps `BACKUP_KEEP_COPIES` copies; sheet menu "สำรองข้อมูลตอนนี้". Needs the Drive permission, so run the setup menu once after pushing and before deploying.
+- **Frontend:** third-party scripts are served from `assets/vendor/` instead of CDNs. Every page has a Content-Security-Policy meta tag with hashes of its inline scripts; run `node tools/apply-csp.js` after editing an inline script (a unit test fails otherwise).

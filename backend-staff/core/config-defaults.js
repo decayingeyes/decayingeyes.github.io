@@ -19,10 +19,13 @@ var HHConfigDefaults = (function () {
     { key: 'SESSION_DAYS_MEMBER', value: 7, type: 'number', description: 'สมาชิกล็อกอินค้างได้กี่วัน' },
     { key: 'SESSION_HOURS_SCANNER', value: 12, type: 'number', description: 'ผู้สแกน/แอดมินล็อกอินค้างได้กี่ชั่วโมง' },
     { key: 'LOGIN_MAX_FAILURES', value: 5, type: 'int', description: 'ใส่รหัสผิดได้กี่ครั้งก่อนล็อก' },
+    { key: 'LOGIN_ACCOUNT_MAX_FAILURES', value: 15, type: 'int', description: 'ผิดรวมทุกเครื่องกี่ครั้ง จึงล็อกเครื่องที่บัญชีนี้ไม่เคยเข้าใช้' },
     { key: 'LOGIN_LOCK_MINUTES', value: 10, type: 'int', description: 'ล็อกการเข้าสู่ระบบกี่นาที' },
+    { key: 'REQUIRE_2FA', value: true, type: 'bool', description: 'แอดมินต้องยืนยันตัวตน 2 ชั้นตอนเข้าสู่ระบบ' },
+    { key: 'BACKUP_KEEP_COPIES', value: 14, type: 'int', description: 'เก็บไฟล์สำรองรายวันย้อนหลังกี่ชุด' },
     { key: 'PASSWORD_MIN_LENGTH', value: 8, type: 'int', description: 'รหัสผ่านอย่างน้อยกี่ตัวอักษร' },
     { key: 'PASSWORD_HASH_ROUNDS', value: 1000, type: 'int', description: 'จำนวนรอบการแฮชรหัสผ่าน (อย่าลดลง)' },
-    { key: 'SIGNUP_JOIN_CODE', value: '', type: 'string', description: 'รหัสกลางเข้าร่วมงาน: ใส่ตอนสมัครแล้วเข้าใช้ได้ทันที (เว้นว่าง = ต้องรอแอดมินอนุมัติทุกคน) — เปลี่ยนได้ที่หน้าแอดมิน' },
+    { key: 'SIGNUP_JOIN_CODE', value: '', type: 'string', description: 'รหัสกลางเข้าร่วมงาน: คนที่มีชื่อในรายชื่อและกรอกชื่อตรงเข้าใช้ได้ทันที คนอื่นรอแอดมินอนุมัติ — เปลี่ยนได้ที่หน้าแอดมิน' },
   ];
 
   function coerce(raw, type, fallback) {

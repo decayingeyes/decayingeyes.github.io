@@ -2,12 +2,13 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-rXtAPQeLGEq3j7p8GOpYk9Dg1EsvwsO+hmijBMrGxtM='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ทดสอบกล้อง — ระบบสตาฟ</title>
   <link rel="stylesheet" href="assets/style.css">
-  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="assets/vendor/zxing.min.js"></script>
+  <script src="assets/vendor/qrcode.js"></script>
+  <script src="assets/vendor/jsQR.js"></script>
   <script src="assets/scanner.js"></script>
 </head>
 <body>

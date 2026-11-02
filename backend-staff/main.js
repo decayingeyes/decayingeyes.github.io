@@ -13,6 +13,7 @@ function handlers_() {
     'auth.activate': handleAuthActivate_,
     'auth.login': handleAuthLogin_,
     'auth.signup': handleAuthSignup_,
+    'auth.twoFactor': handleAuthTwoFactor_,
     'auth.logout': handleAuthLogout_,
     'auth.me': handleAuthMe_,
     'me.card': handleMeCard_,

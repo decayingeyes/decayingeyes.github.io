@@ -48,7 +48,7 @@ var HHSessions = (function () {
     var expiresAt = null;
     if (s && new Date(s.data.ExpiresAt) > new Date()) {
       var m = HHRepo.findBy('Members', 'StudentID', s.data.StudentID);
-      if (m && m.data.Status === 'ACTIVE') {
+      if (m && m.data.Status === 'ACTIVE' && passesTwoFactor_(m.data, s.data)) {
         actor = toActor_(m.data);
         expiresAt = new Date(s.data.ExpiresAt);
       }
@@ -59,6 +59,13 @@ var HHSessions = (function () {
       cache.put(cacheKey_(hash), 'none', 60);
     }
     return actor;
+  }
+
+  function passesTwoFactor_(member, session) {
+    var cfg = HHConfig.get();
+    if (!HHAuth.requiresTwoFactor(member.Role, cfg)) return true;
+    var row = HHRepo.findBy('TwoFactor', 'StudentID', member.StudentID);
+    return HHAuth.sessionPassesTwoFactor(member.Role, cfg, session.CreatedAt, row ? row.data : null);
   }
 
   function epochKey_(studentId) {
@@ -77,6 +84,25 @@ var HHSessions = (function () {
     CacheService.getScriptCache().remove(cacheKey_(hash));
   }
 
+  /**
+   * End every login of this member, on all devices. Used when the password or
+   * second login step changes, so a stolen login stops working right away.
+   * @return {number} logins ended
+   */
+  function revokeAllFor(studentId) {
+    var sid = String(studentId);
+    var now = new Date();
+    var ended = 0;
+    HHRepo.all('AuthSessions').forEach(function (s) {
+      if (String(s.data.StudentID) === sid && new Date(s.data.ExpiresAt) > now) {
+        HHRepo.update('AuthSessions', s.row, { ExpiresAt: now });
+        ended++;
+      }
+    });
+    invalidateMember(sid);
+    return ended;
+  }
+
   function toActor_(m) {
     return {
       studentId: String(m.StudentID),
@@ -92,6 +118,7 @@ var HHSessions = (function () {
     create: create,
     resolve: resolve,
     revoke: revoke,
+    revokeAllFor: revokeAllFor,
     invalidateMember: invalidateMember,
     toActor: toActor_,
   };

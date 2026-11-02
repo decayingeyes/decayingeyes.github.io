@@ -12,7 +12,7 @@ test('no sheet has duplicate headers', () => {
 });
 
 test('every data sheet except Config/Units/Errors carries UnitID', () => {
-  const exempt = ['Config', 'Units', 'Errors', 'AuthSessions'];
+  const exempt = ['Config', 'Units', 'Errors', 'AuthSessions', 'TwoFactor'];
   for (const name of S.sheetNames().filter((n) => !exempt.includes(n))) {
     assert.ok(S.headers(name).includes('UnitID'), name);
   }

@@ -5,7 +5,8 @@
 function handleAuthActivate_(payload, ctx) {
   var sid = HHAuth.normalizeStudentId(payload.studentId);
   if (!HHAuth.isValidStudentId(sid)) throw new HHErrors.AppError('ACTIVATION_FAILED');
-  HHRateLimit.assertNotLocked('activate', sid);
+  var opts = deviceOpts_(payload, sid);
+  HHRateLimit.assertNotLocked('activate', sid, opts);
   var cfg = HHConfig.get();
   var pwProblem = HHAuth.passwordProblem(payload.password, cfg.PASSWORD_MIN_LENGTH);
   if (pwProblem) throw new HHErrors.AppError('VALIDATION', pwProblem);
@@ -20,7 +21,7 @@ function handleAuthActivate_(payload, ctx) {
     var expected = m ? String(m.data.ActivationCodeHash) : '';
     var given = HHAuth.hashActivationCode(payload.code, HHAccounts.pepper(), HHCrypto.sha256Hex);
     if (!m || !expected || m.data.Status !== 'ACTIVE' || !HHAuth.safeEqual(expected, given)) {
-      HHRateLimit.recordFailure('activate', sid);
+      HHRateLimit.recordFailure('activate', sid, opts);
       HHLog.append({ requestId: ctx.requestId, studentId: sid, action: 'LOGIN_FAIL', method: 'SYSTEM', note: 'activate' });
       throw new HHErrors.AppError('ACTIVATION_FAILED');
     }
@@ -29,17 +30,20 @@ function handleAuthActivate_(payload, ctx) {
     HHRepo.update('Members', m.row, {
       PasswordHash: hash, Salt: salt, ActivationCodeHash: '', ActivatedAt: new Date(),
     });
+    // A new password ends every older login, so a stolen one stops working.
+    HHSessions.revokeAllFor(sid);
     HHLog.append({ requestId: ctx.requestId, unitId: m.data.UnitID, studentId: sid, action: 'ACTIVATE', actorId: sid, method: 'SYSTEM' });
     return m.data;
   });
-  HHRateLimit.reset('activate', sid);
-  return { token: HHSessions.create(member, payload.userAgent), profile: profileOf_(member) };
+  HHRateLimit.reset('activate', sid, opts);
+  return completeLogin_(member, payload);
 }
 
 function handleAuthLogin_(payload, ctx) {
   var sid = HHAuth.normalizeStudentId(payload.studentId);
   if (!HHAuth.isValidStudentId(sid)) throw new HHErrors.AppError('LOGIN_FAILED');
-  HHRateLimit.assertNotLocked('login', sid);
+  var opts = deviceOpts_(payload, sid);
+  HHRateLimit.assertNotLocked('login', sid, opts);
   var cfg = HHConfig.get();
   var m = HHRepo.findBy('Members', 'StudentID', sid);
   var ok = false;
@@ -52,12 +56,12 @@ function handleAuthLogin_(payload, ctx) {
   // Correct password but the self sign-up is not approved yet: say so (only after the password matched).
   if (ok && m.data.Status === 'PENDING') throw new HHErrors.AppError('PENDING_APPROVAL');
   if (!ok) {
-    var n = HHRateLimit.recordFailure('login', sid);
+    var n = HHRateLimit.recordFailure('login', sid, opts);
     HHLog.append({ requestId: ctx.requestId, unitId: m ? m.data.UnitID : '', studentId: sid, action: 'LOGIN_FAIL', method: 'SYSTEM', note: 'failures=' + n });
     throw new HHErrors.AppError('LOGIN_FAILED');
   }
-  HHRateLimit.reset('login', sid);
-  return { token: HHSessions.create(m.data, payload.userAgent), profile: profileOf_(m.data) };
+  HHRateLimit.reset('login', sid, opts);
+  return completeLogin_(m.data, payload);
 }
 
 function handleAuthLogout_(payload, ctx) {
@@ -90,8 +94,10 @@ function profileOf_(m) {
 var MAX_PENDING_SIGNUPS = 500; // keeps a flood of fake sign-ups from filling the sheet
 
 /**
- * Self sign-up: creates a PENDING member (member role, "no team yet") with the
- * chosen password. Usable only after a unit admin approves (signup.review).
+ * Self sign-up. Someone on the roster with the shared join code and a matching
+ * name claims their row and is in at once. Everyone else becomes a PENDING
+ * member (member role, "no team yet"), usable only after a unit admin approves
+ * (signup.review). See HHAuth.signupAgainst.
  */
 function handleAuthSignup_(payload, ctx) {
   var cfg = HHConfig.get();
@@ -105,8 +111,8 @@ function handleAuthSignup_(payload, ctx) {
   var problem = HHAuth.signupProblem(f, cfg.PASSWORD_MIN_LENGTH);
   if (problem) throw new HHErrors.AppError('VALIDATION', problem);
   HHRateLimit.assertNotLocked('signup', f.studentId);
-  // Shared join code: correct -> active at once; wrong -> refused (rate-limited
-  // per student id, so a few typos never lock out the whole crew); empty -> waits for an admin.
+  // Shared join code: wrong -> refused (rate-limited per student id, so a few
+  // typos never lock out the whole crew); correct or empty -> see signupAgainst below.
   var join = HHAuth.joinCodeResult(payload.joinCode, cfg.SIGNUP_JOIN_CODE);
   if (join === 'wrong') {
     HHRateLimit.assertNotLocked('joincode', f.studentId);
@@ -123,10 +129,22 @@ function handleAuthSignup_(payload, ctx) {
       throw new HHErrors.AppError('BUSY', 'มีผู้สมัครรออนุมัติจำนวนมาก กรุณาติดต่อหัวหน้าทีม');
     }
     var existingRow = HHRepo.findBy('Members', 'StudentID', f.studentId);
-    var verdict = HHAuth.signupAgainst(existingRow ? existingRow.data : null);
+    var verdict = HHAuth.signupAgainst(existingRow ? existingRow.data : null, f, join);
     if (!verdict.ok) {
       HHRateLimit.recordFailure('signup', f.studentId);
       throw new HHErrors.AppError('VALIDATION', verdict.messageTh);
+    }
+
+    if (verdict.mode === 'claim') {
+      var claimSalt = HHAuth.newSalt(HHCrypto.randInt);
+      HHRepo.update('Members', existingRow.row, {
+        PasswordHash: HHAuth.hashPassword(f.password, claimSalt, HHAccounts.pepper(), cfg.PASSWORD_HASH_ROUNDS, HHCrypto.sha256Hex),
+        Salt: claimSalt, ActivationCodeHash: '', ActivatedAt: new Date(),
+      });
+      HHLog.append({ requestId: ctx.requestId, unitId: existingRow.data.UnitID, studentId: f.studentId, action: 'SIGNUP',
+        actorId: f.studentId, method: 'SELF', flags: ['JOIN_CODE', 'ROSTER_MATCH'], note: String(existingRow.data.Nickname) });
+      var claimed = HHRepo.findBy('Members', 'StudentID', f.studentId).data;
+      return Object.assign({ studentId: f.studentId, status: 'ACTIVE' }, loginResult_(claimed, payload));
     }
 
     // Reuse the roster planner for the "no department / no team yet" placeholders.
@@ -135,7 +153,7 @@ function handleAuthSignup_(payload, ctx) {
       Unit: String(unit.Name), Department: '', Team: '', Shift: '', Role: 'member',
     }], {
       units: units, departments: HHSheets.readAll('Departments'), teams: HHSheets.readAll('Teams'),
-      members: verdict.overwrite ? [] : members,
+      members: verdict.mode === 'overwrite' ? [] : members,
     }, { unitId: String(unit.UnitID), rolesFromCsv: false });
     HHRepo.appendMany('Departments', plan.newDepartments);
     HHRepo.appendMany('Teams', plan.newTeams);
@@ -144,9 +162,9 @@ function handleAuthSignup_(payload, ctx) {
     var account = {
       PasswordHash: HHAuth.hashPassword(f.password, salt, HHAccounts.pepper(), cfg.PASSWORD_HASH_ROUNDS, HHCrypto.sha256Hex),
       Salt: salt, ActivationCodeHash: '', ActivatedAt: new Date(), CodeVersion: 1,
-      Status: join === 'match' ? 'ACTIVE' : 'PENDING', CurrentState: 'OUT', OpenSessionID: '',
+      Status: 'PENDING', CurrentState: 'OUT', OpenSessionID: '',
     };
-    if (verdict.overwrite) {
+    if (verdict.mode === 'overwrite') {
       var upd = Object.assign({}, fields, account);
       delete upd.StudentID;
       HHRepo.update('Members', existingRow.row, upd);
@@ -156,9 +174,6 @@ function handleAuthSignup_(payload, ctx) {
     HHOrg.clearCache();
     HHLog.append({ requestId: ctx.requestId, unitId: unit.UnitID, studentId: f.studentId, action: 'SIGNUP',
       actorId: f.studentId, method: 'SELF', flags: join === 'match' ? ['JOIN_CODE'] : [], note: f.nickname });
-    if (join !== 'match') return { studentId: f.studentId, status: 'PENDING' };
-    // Joined with the shared code: log straight in.
-    var member = HHRepo.findBy('Members', 'StudentID', f.studentId).data;
-    return { studentId: f.studentId, status: 'ACTIVE', token: HHSessions.create(member, payload.userAgent), profile: profileOf_(member) };
+    return { studentId: f.studentId, status: 'PENDING' };
   });
 }

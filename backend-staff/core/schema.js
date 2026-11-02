@@ -38,6 +38,8 @@ var HHSchema = (function () {
     Errors: ['Timestamp', 'Env', 'RequestId', 'Action', 'StudentID', 'Code', 'Message', 'Stack'],
     // Added after spec v4 (owner decision 2026-10-30): card photo as a small JPEG data URL.
     Photos: ['StudentID', 'UnitID', 'Photo', 'UpdatedAt', 'UpdatedBy'],
+    // Added after spec v4 (owner decision 2026-11-03): authenticator-app second login step.
+    TwoFactor: ['StudentID', 'SecretSealed', 'EnabledAt', 'LastCounter', 'RecoveryHashes'],
   };
 
   /**
@@ -46,11 +48,11 @@ var HHSchema = (function () {
    */
   var TEXT_COLUMNS = ['StudentID', 'TargetStudentID', 'ActorID', 'ScannedInBy', 'ScannedOutBy', 'ProposedBy',
     'ReviewedBy', 'ResolvedBy', 'GrantedBy', 'ClosedBy', 'WorkDate', 'Date', 'StartDate', 'EndDate',
-    'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value'];
+    'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value', 'SecretSealed', 'RecoveryHashes'];
 
   /** Columns holding Date values; shown with date AND time (Sheets defaults to date only). */
   var DATETIME_COLUMNS = ['Timestamp', 'In', 'Out', 'CreatedAt', 'ExpiresAt', 'ActivatedAt', 'GrantedAt',
-    'ProposedIn', 'ProposedOut', 'ProposedAt', 'ReviewedAt', 'ClosedAt', 'UpdatedAt'];
+    'ProposedIn', 'ProposedOut', 'ProposedAt', 'ReviewedAt', 'ClosedAt', 'UpdatedAt', 'EnabledAt'];
   var DATETIME_FORMAT = 'yyyy-mm-dd hh:mm:ss';
 
   function datetimeColumnIndexes(sheetName) {

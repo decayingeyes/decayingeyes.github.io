@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-ko0GwlE1GVTqQBJ7dVGAAq1zltw0y47P1BrnYl5wLWc='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>เปิดใช้งานบัญชี — ระบบสตาฟ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -9,6 +10,8 @@
   <link rel="stylesheet" href="../assets/style.css">
   <script src="../config.js"></script>
   <script src="../assets/api.js"></script>
+  <script src="../assets/vendor/qrcode.js"></script>
+  <script src="../assets/twofactor.js"></script>
 </head>
 <body>
   <main>
@@ -59,8 +62,7 @@
             return;
           }
           if (!res.ok) { HH.say(msg, HH.errorText(res), 'bad'); return; }
-          HH.token.set(res.data.token);
-          window.location.replace('portal.html');
+          HH2FA.finish(res.data, document.getElementById('sid').value);
         });
       });
     })();

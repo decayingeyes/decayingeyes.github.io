@@ -3,7 +3,7 @@
  * The frontend refuses to talk to a backend with a different MAJOR version.
  */
 var HHVersion = {
-  API_VERSION: '0.1.0',
+  API_VERSION: '0.2.0',
 };
 
 if (typeof module !== 'undefined') module.exports = HHVersion;

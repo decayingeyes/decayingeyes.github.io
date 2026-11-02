@@ -166,8 +166,8 @@ test('self sign-up: form validation and existing-account rules', () => {
   assert.ok(A.signupProblem({ ...ok, nickname: '  ' }, 8));
   assert.ok(A.signupProblem({ ...ok, firstName: 'ก'.repeat(61) }, 8));
   assert.ok(A.signupProblem({ ...ok, password: 'short' }, 8));
-  assert.deepEqual(A.signupAgainst(null), { ok: true, overwrite: false, messageTh: null });
-  assert.equal(A.signupAgainst({ Status: 'REJECTED' }).overwrite, true);
+  assert.deepEqual(A.signupAgainst(null), { ok: true, mode: 'new', status: 'PENDING', messageTh: null });
+  assert.equal(A.signupAgainst({ Status: 'REJECTED' }).mode, 'overwrite');
   assert.equal(A.signupAgainst({ Status: 'PENDING' }).ok, false);
   assert.equal(A.signupAgainst({ Status: 'ACTIVE' }).ok, false);
   assert.equal(A.signupAgainst({ Status: 'DISABLED' }).ok, false);

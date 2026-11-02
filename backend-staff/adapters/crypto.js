@@ -21,6 +21,20 @@ var HHCrypto = (function () {
     return Utilities.computeHmacSha256Signature(message, key, Utilities.Charset.UTF_8);
   }
 
+  function hmacHex(key, message) {
+    return bytesToHex(hmacBytes(key, message));
+  }
+
+  /** Apps Script byte[] values must be in -128..127. */
+  function toSigned_(bytes) {
+    return bytes.map(function (b) { var v = b & 0xff; return v > 127 ? v - 256 : v; });
+  }
+
+  /** HMAC-SHA1 over raw bytes, the algorithm authenticator apps use. */
+  function hmacSha1(keyBytes, messageBytes) {
+    return Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_1, toSigned_(messageBytes), toSigned_(keyBytes));
+  }
+
   /** Random byte from SecureRandom-backed UUIDs, hashed to remove fixed version bits. */
   function randomByte_() {
     if (pool.length === 0) {
@@ -46,6 +60,8 @@ var HHCrypto = (function () {
   return {
     sha256Hex: sha256Hex,
     hmacBytes: hmacBytes,
+    hmacHex: hmacHex,
+    hmacSha1: hmacSha1,
     randInt: randInt,
     newToken: newToken,
   };

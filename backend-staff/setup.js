@@ -18,6 +18,9 @@ function onOpen() {
     .addSeparator()
     .addItem('ล้างประวัติการเข้างานทั้งหมด (สำรองไว้ก่อน)', 'menuClearAttendance')
     .addSeparator()
+    .addItem('สำรองข้อมูลตอนนี้', 'menuBackupNow')
+    .addItem('ล้างการยืนยัน 2 ชั้น (คนทำโทรศัพท์หาย)', 'menuResetTwoFactor')
+    .addSeparator()
     .addItem('ตรวจสอบโครงสร้างชีต', 'menuValidateSchema')
     .addItem('ดูสถานะระบบ', 'menuShowStatus')
     .addToUi();
@@ -68,6 +71,23 @@ function menuIssueCode() {
   }
 }
 
+function menuBackupNow() {
+  var r = HHBackup.run();
+  SpreadsheetApp.getUi().alert('สำรองแล้ว: ' + r.name + '\nลบชุดเก่า ' + r.removed + ' ชุด\nโฟลเดอร์: ' + r.folderUrl);
+}
+
+function menuResetTwoFactor() {
+  var ui = SpreadsheetApp.getUi();
+  var r = ui.prompt('ล้างการยืนยัน 2 ชั้น', 'ตรวจตัวตนเจ้าของบัญชีให้แน่ใจก่อน\nรหัสนักศึกษา:', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  try {
+    var done = resetTwoFactor_(r.getResponseText(), HHIds.newRequestId());
+    ui.alert(done.studentId + ' (' + done.nickname + ')\nล้างแล้ว และออกจากระบบทุกเครื่อง ' + done.ended + ' รายการ\nเข้าสู่ระบบครั้งถัดไปต้องตั้งค่าแอปใหม่');
+  } catch (e) {
+    ui.alert(HHErrors.toPublic(e).messageTh);
+  }
+}
+
 function writeCodes_(codes) {
   if (codes.length === 0) return;
   var book = SpreadsheetApp.getActiveSpreadsheet();
@@ -109,9 +129,11 @@ function setupAs_(env) {
   var added = HHConfig.ensureDefaults();
   installTriggers_();
   HHSummarySheets.refresh();
+  var backupFolder = HHBackup.ensureFolder();
 
   var msg = 'ตั้งค่าเสร็จแล้ว: โหมด ' + env +
-    '\nสร้างชีตใหม่ ' + result.created.length + ' แผ่น, เพิ่มค่า Config ' + added + ' รายการ';
+    '\nสร้างชีตใหม่ ' + result.created.length + ' แผ่น, เพิ่มค่า Config ' + added + ' รายการ' +
+    '\nโฟลเดอร์สำรองรายวัน: ' + backupFolder.getName();
   if (result.problems.length > 0) {
     msg += '\n\n⚠️ พบปัญหาหัวตาราง:\n' + result.problems.join('\n');
   }
@@ -123,6 +145,7 @@ function installTriggers_() {
   var wanted = {
     summaryTick: function (b) { return b.everyMinutes(1); },
     autoCloseTick: function (b) { return b.everyHours(1); },
+    backupTick: function (b) { return b.everyDays(1).atHour(3).inTimezone('Asia/Bangkok'); },
   };
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (wanted[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);

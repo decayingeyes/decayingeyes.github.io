@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-vb32wgc29mlKpcZKTUCsECLiU1LE+qRu/LGd2HBUUfA='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>หน้าแอดมิน — ระบบสตาฟ</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,7 +47,7 @@
             <b>🔑 รหัสเข้าร่วมงาน (รหัสกลาง)</b>
             <span class="code-big small-code" id="join-code">…</span>
           </div>
-          <p class="muted small">ใส่ตอนสมัครแล้ว<b>เข้าใช้ได้ทันที</b>เป็นสมาชิกธรรมดา · ส่งให้เฉพาะคนในงาน · ถ้ารหัสหลุดไปคนนอก กด "สร้างรหัสใหม่" รหัสเก่าจะใช้ไม่ได้ทันที</p>
+          <p class="muted small">คนที่<b>มีชื่อในรายชื่อด้านล่าง</b>และกรอกชื่อตรง ใส่รหัสนี้แล้วเข้าใช้ได้ทันที · คนที่ไม่มีชื่อจะมารออนุมัติที่กล่องด้านบน · ส่งให้เฉพาะคนในงาน · ถ้ารหัสหลุดไปคนนอก กด "สร้างรหัสใหม่" รหัสเก่าจะใช้ไม่ได้ทันที</p>
           <div class="two">
             <button class="btn secondary" id="copy-join-link" type="button">📋 คัดลอกลิงก์สมัคร (ใส่รหัสให้แล้ว)</button>
             <button class="btn secondary" id="regen-join" type="button">🔄 สร้างรหัสใหม่</button>

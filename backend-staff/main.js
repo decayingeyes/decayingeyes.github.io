@@ -14,6 +14,7 @@ function handlers_() {
     'auth.login': handleAuthLogin_,
     'auth.signup': handleAuthSignup_,
     'auth.twoFactor': handleAuthTwoFactor_,
+    'auth.google': handleAuthGoogle_,
     'auth.logout': handleAuthLogout_,
     'auth.me': handleAuthMe_,
     'me.card': handleMeCard_,

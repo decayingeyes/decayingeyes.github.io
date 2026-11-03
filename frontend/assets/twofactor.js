@@ -1,6 +1,7 @@
 /**
- * Finish a login. Most people go straight in. Admins get one more screen: set
- * up an authenticator app the first time, then type its 6-digit code each login.
+ * Finish a login. Most people go straight in. Admins get one more screen:
+ * sign in with their Google account (the first time links that account), or,
+ * when Google sign-in is not configured, an authenticator app's 6-digit code.
  * Needs api.js and vendor/qrcode.js. Exposes HH2FA.finish.
  */
 (function () {
@@ -94,15 +95,109 @@
           code.input.focus();
           return;
         }
-        HH.token.set(res.data.token);
-        if (res.data.recoveryCodes) showRecoveryCodes(res.data.recoveryCodes, ctx.next);
-        else if (res.data.recoveryCodesLeft !== undefined) showRecoveryLeft(res.data.recoveryCodesLeft, ctx.next);
-        else window.location.replace(ctx.next);
+        afterLogin(res.data, ctx.next);
       });
     });
     // Setup keeps the page at the top: focusing here would scroll past the steps
     // and open the phone keyboard before they have read them.
     if (stage === 'verify') code.input.focus();
+  }
+
+  var GSI_SRC = 'https://accounts.google.com/gsi/client';
+
+  function loadGoogle() {
+    return new Promise(function (resolve, reject) {
+      if (window.google && google.accounts && google.accounts.id) { resolve(); return; }
+      var s = document.createElement('script');
+      s.src = GSI_SRC;
+      s.async = true;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error('gsi')); };
+      document.head.appendChild(s);
+      setTimeout(function () { reject(new Error('timeout')); }, 15000);
+    });
+  }
+
+  /** Apps like LINE and Facebook open links in their own browser, where Google refuses to sign in. */
+  function inAppBrowser() {
+    return /Line\/|FBAN|FBAV|Instagram|MicroMessenger|TikTok|; wv\)/i.test(navigator.userAgent);
+  }
+
+  function afterLogin(data, next) {
+    HH.token.set(data.token);
+    if (data.recoveryCodes) showRecoveryCodes(data.recoveryCodes, next);
+    else if (data.recoveryCodesLeft !== undefined) showRecoveryLeft(data.recoveryCodesLeft, next);
+    else if (data.linkedEmail) showLinked(data.linkedEmail, next);
+    else window.location.replace(next);
+  }
+
+  function showGoogle(ctx, t) {
+    if (t.hasApp && !t.linked) { showVerify(ctx); return; }
+    var main = screen('ยืนยันตัวตนด้วย Google');
+    if (t.linked) {
+      main.appendChild(el('p', 'muted', 'บัญชีผู้ดูแลต้องยืนยันตัวตนอีกขั้น กดปุ่มด้านล่าง แล้วเลือกบัญชี Google ที่ผูกไว้ (' + t.linkedEmail + ')'));
+    } else {
+      main.appendChild(el('p', 'muted', 'บัญชีผู้ดูแลแก้ข้อมูลของคนอื่นได้ จึงต้องยืนยันตัวตนอีกขั้นด้วยบัญชี Google'));
+      var steps = el('ol', 'steps');
+      steps.appendChild(el('li', '', 'กดปุ่ม "ดำเนินการต่อด้วย Google" ด้านล่าง'));
+      steps.appendChild(el('li', '', 'เลือกบัญชี Google ของตัวเอง (บัญชีที่ใช้ประจำ)'));
+      steps.appendChild(el('li', '', 'ครั้งต่อไปต้องใช้บัญชีเดิมนี้ทุกครั้ง'));
+      main.appendChild(steps);
+    }
+    var slot = el('div', 'google-slot');
+    main.appendChild(slot);
+    var msg = el('p', 'msg');
+    main.appendChild(msg);
+
+    if (inAppBrowser()) {
+      main.appendChild(el('p', 'msg bad', 'หน้านี้เปิดอยู่ในแอป (เช่น LINE) ซึ่ง Google ไม่ยอมให้ยืนยันตัวตน กรุณากด ⋯ แล้วเลือก "เปิดใน Safari/Chrome"'));
+    }
+    if (t.hasApp) {
+      var useApp = el('button', 'link-btn', 'ใช้รหัส 6 หลักจากแอปแทน');
+      useApp.type = 'button';
+      useApp.addEventListener('click', function () { showVerify(ctx); });
+      main.appendChild(useApp);
+    }
+
+    HH.say(msg, 'กำลังโหลดปุ่ม Google…');
+    loadGoogle().then(function () {
+      HH.say(msg, '');
+      google.accounts.id.initialize({
+        client_id: t.clientId,
+        nonce: t.nonce,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        use_fedcm_for_button: true,
+        callback: function (resp) {
+          HH.say(msg, 'กำลังตรวจสอบ…');
+          HH.call('auth.google', { challenge: ctx.challenge, credential: resp.credential, studentId: ctx.studentId, userAgent: navigator.userAgent })
+            .then(function (res) {
+              if (!res.ok) {
+                if (res.error.code === 'TWO_FACTOR_EXPIRED') { window.location.replace('login.html'); return; }
+                HH.say(msg, HH.errorText(res), 'bad');
+                return;
+              }
+              afterLogin(res.data, ctx.next);
+            });
+        },
+      });
+      google.accounts.id.renderButton(slot, {
+        type: 'standard', theme: 'filled_blue', size: 'large', shape: 'pill',
+        text: 'continue_with', locale: 'th', width: Math.min(320, slot.clientWidth || 320),
+      });
+    }, function () {
+      HH.say(msg, 'โหลดปุ่ม Google ไม่ได้ ตรวจอินเทอร์เน็ต หรือลองเปิดใน Safari/Chrome แล้วเข้าสู่ระบบใหม่', 'bad');
+    });
+  }
+
+  function showLinked(email, next) {
+    var main = screen('ผูกบัญชี Google แล้ว');
+    main.appendChild(el('p', '', 'บัญชีผู้ดูแลนี้ผูกกับ ' + email + ' แล้ว'));
+    main.appendChild(el('p', 'muted', 'ครั้งต่อไปให้เลือกบัญชีนี้ทุกครั้ง ถ้าต้องการเปลี่ยนบัญชี ให้ผู้ดูแลระบบสูงสุดล้างการยืนยันให้'));
+    var go = el('button', 'btn', 'เข้าใช้งาน');
+    go.type = 'button';
+    go.addEventListener('click', function () { window.location.replace(next); });
+    main.appendChild(go);
   }
 
   function showVerify(ctx) {
@@ -193,7 +288,8 @@
       return;
     }
     var ctx = { challenge: data.twoFactor.challenge, studentId: studentId, next: target };
-    if (data.twoFactor.stage === 'enroll') showEnroll(ctx, data.twoFactor);
+    if (data.twoFactor.stage === 'google') showGoogle(ctx, data.twoFactor);
+    else if (data.twoFactor.stage === 'enroll') showEnroll(ctx, data.twoFactor);
     else showVerify(ctx);
   }
 

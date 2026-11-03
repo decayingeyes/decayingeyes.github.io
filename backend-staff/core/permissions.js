@@ -31,6 +31,7 @@ var HHPermissions = (function () {
     'auth.signup': { minRole: 'public', scope: 'self' },
     // Not in spec v4: second login step for admins; allowed only with a challenge from auth.login.
     'auth.twoFactor': { minRole: 'public', scope: 'self' },
+    'auth.google': { minRole: 'public', scope: 'self' },
     'auth.logout': { minRole: 'member', scope: 'self' },
     'auth.me': { minRole: 'member', scope: 'self' },
 

@@ -22,6 +22,7 @@ var HHConfigDefaults = (function () {
     { key: 'LOGIN_ACCOUNT_MAX_FAILURES', value: 15, type: 'int', description: 'ผิดรวมทุกเครื่องกี่ครั้ง จึงล็อกเครื่องที่บัญชีนี้ไม่เคยเข้าใช้' },
     { key: 'LOGIN_LOCK_MINUTES', value: 10, type: 'int', description: 'ล็อกการเข้าสู่ระบบกี่นาที' },
     { key: 'REQUIRE_2FA', value: true, type: 'bool', description: 'แอดมินต้องยืนยันตัวตน 2 ชั้นตอนเข้าสู่ระบบ' },
+    { key: 'GOOGLE_CLIENT_ID', value: '', type: 'string', description: 'OAuth Client ID สำหรับให้แอดมินยืนยันตัวตนด้วยบัญชี Google (เว้นว่าง = ใช้แอปรหัส 6 หลักแทน)' },
     { key: 'BACKUP_KEEP_COPIES', value: 14, type: 'int', description: 'เก็บไฟล์สำรองรายวันย้อนหลังกี่ชุด' },
     { key: 'PASSWORD_MIN_LENGTH', value: 8, type: 'int', description: 'รหัสผ่านอย่างน้อยกี่ตัวอักษร' },
     { key: 'PASSWORD_HASH_ROUNDS', value: 1000, type: 'int', description: 'จำนวนรอบการแฮชรหัสผ่าน (อย่าลดลง)' },

@@ -273,6 +273,7 @@ body.has-nav .flash { bottom: calc(80px + env(safe-area-inset-bottom)); }
 /* second login step */
 .qr-box { background: #fff; border-radius: 10px; padding: 12px; width: min(260px, 100%); margin: 12px auto; }
 .qr-box svg { display: block; width: 100%; height: auto; }
+.google-slot { display: flex; justify-content: center; min-height: 48px; margin: 20px 0 8px; }
 .key-text, .recovery-list { font-family: ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
 .recovery-list { list-style: none; padding: 12px; margin: 12px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 1.05rem; background: #1f1f26; border-radius: 10px; }
 .check-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }

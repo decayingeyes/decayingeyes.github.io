@@ -29,7 +29,7 @@
   function rememberRole(action, res) {
     if (!res || !res.ok || !res.data) return;
     var role = null;
-    if (action === 'auth.login' || action === 'auth.activate' || action === 'auth.twoFactor' || action === 'auth.me') role = res.data.profile && res.data.profile.role;
+    if (action === 'auth.login' || action === 'auth.activate' || action === 'auth.twoFactor' || action === 'auth.google' || action === 'auth.me') role = res.data.profile && res.data.profile.role;
     if (action === 'me.card') role = res.data.role;
     if (role) {
       var changed = storage.get(roleKey) !== role;
@@ -43,7 +43,7 @@
   }
 
   // ---- this browser's identity for login lockouts (see HHAuth.attemptLocked) ----
-  var LOGIN_ACTIONS = { 'auth.login': true, 'auth.activate': true, 'auth.signup': true, 'auth.twoFactor': true };
+  var LOGIN_ACTIONS = { 'auth.login': true, 'auth.activate': true, 'auth.signup': true, 'auth.twoFactor': true, 'auth.google': true };
 
   function deviceId() {
     var id = storage.get('hh.device');

@@ -19,7 +19,7 @@ function onOpen() {
     .addItem('ล้างประวัติการเข้างานทั้งหมด (สำรองไว้ก่อน)', 'menuClearAttendance')
     .addSeparator()
     .addItem('สำรองข้อมูลตอนนี้', 'menuBackupNow')
-    .addItem('ล้างการยืนยัน 2 ชั้น (คนทำโทรศัพท์หาย)', 'menuResetTwoFactor')
+    .addItem('ล้างการยืนยัน 2 ชั้น (เปลี่ยนบัญชี Google / ทำโทรศัพท์หาย)', 'menuResetTwoFactor')
     .addSeparator()
     .addItem('ตรวจสอบโครงสร้างชีต', 'menuValidateSchema')
     .addItem('ดูสถานะระบบ', 'menuShowStatus')
@@ -82,7 +82,7 @@ function menuResetTwoFactor() {
   if (r.getSelectedButton() !== ui.Button.OK) return;
   try {
     var done = resetTwoFactor_(r.getResponseText(), HHIds.newRequestId());
-    ui.alert(done.studentId + ' (' + done.nickname + ')\nล้างแล้ว และออกจากระบบทุกเครื่อง ' + done.ended + ' รายการ\nเข้าสู่ระบบครั้งถัดไปต้องตั้งค่าแอปใหม่');
+    ui.alert(done.studentId + ' (' + done.nickname + ')\nล้างแล้ว และออกจากระบบทุกเครื่อง ' + done.ended + ' รายการ\nเข้าสู่ระบบครั้งถัดไปจะผูกบัญชี Google (หรือแอป) ใหม่');
   } catch (e) {
     ui.alert(HHErrors.toPublic(e).messageTh);
   }

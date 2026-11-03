@@ -39,7 +39,8 @@ var HHSchema = (function () {
     // Added after spec v4 (owner decision 2026-10-30): card photo as a small JPEG data URL.
     Photos: ['StudentID', 'UnitID', 'Photo', 'UpdatedAt', 'UpdatedBy'],
     // Added after spec v4 (owner decision 2026-11-03): authenticator-app second login step.
-    TwoFactor: ['StudentID', 'SecretSealed', 'EnabledAt', 'LastCounter', 'RecoveryHashes'],
+    // GoogleSub/GoogleEmail: the Google account linked as the second step (2026-11-03, same day).
+    TwoFactor: ['StudentID', 'SecretSealed', 'EnabledAt', 'LastCounter', 'RecoveryHashes', 'GoogleSub', 'GoogleEmail'],
   };
 
   /**
@@ -48,7 +49,7 @@ var HHSchema = (function () {
    */
   var TEXT_COLUMNS = ['StudentID', 'TargetStudentID', 'ActorID', 'ScannedInBy', 'ScannedOutBy', 'ProposedBy',
     'ReviewedBy', 'ResolvedBy', 'GrantedBy', 'ClosedBy', 'WorkDate', 'Date', 'StartDate', 'EndDate',
-    'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value', 'SecretSealed', 'RecoveryHashes'];
+    'Shift', 'ExpectedStart', 'ExpectedEnd', 'Key', 'Value', 'SecretSealed', 'RecoveryHashes', 'GoogleSub'];
 
   /** Columns holding Date values; shown with date AND time (Sheets defaults to date only). */
   var DATETIME_COLUMNS = ['Timestamp', 'In', 'Out', 'CreatedAt', 'ExpiresAt', 'ActivatedAt', 'GrantedAt',

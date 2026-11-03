@@ -31,17 +31,22 @@ function inlineScripts(html) {
   return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1].replace(/\r\n?/g, '\n'));
 }
 
+/** Google's sign-in button, allowed only on pages that finish a login (admins' second step). */
+const GSI = 'https://accounts.google.com/gsi/';
+
 function policy(html) {
   const hashes = inlineScripts(html).map((s) => `'sha256-${crypto.createHash('sha256').update(s, 'utf8').digest('base64')}'`);
+  const gsi = html.includes('assets/twofactor.js');
   return [
     "default-src 'none'",
-    ["script-src 'self'", ...hashes].join(' '),
+    ["script-src 'self'", ...hashes, ...(gsi ? [`${GSI}client`] : [])].join(' '),
     // Inline style attributes remain in the pages; they cannot run code.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com${gsi ? ` ${GSI}style` : ''}`,
     'font-src https://fonts.gstatic.com',
-    "img-src 'self' data: blob:",
+    `img-src 'self' data: blob:${gsi ? ' https://*.googleusercontent.com' : ''}`,
     "media-src 'self' blob:",
-    'connect-src https://script.google.com https://script.googleusercontent.com',
+    `connect-src https://script.google.com https://script.googleusercontent.com${gsi ? ` ${GSI}` : ''}`,
+    ...(gsi ? [`frame-src ${GSI}`] : []),
     "base-uri 'none'",
     "form-action 'none'",
   ].join('; ');

@@ -51,6 +51,7 @@
             <button class="btn secondary" id="copy-join-link" type="button">📋 คัดลอกลิงก์สมัคร (ใส่รหัสให้แล้ว)</button>
             <button class="btn secondary" id="regen-join" type="button">🔄 สร้างรหัสใหม่</button>
           </div>
+          <button class="btn secondary" id="print-join-qr" type="button">🖨️ เปิดโปสเตอร์ QR พร้อมรหัสนี้</button>
           <div class="confirm" id="regen-confirm" hidden>
             <div>สร้างรหัสใหม่? รหัสเดิมและลิงก์เดิมจะใช้ไม่ได้อีก</div>
             <div class="two">
@@ -296,6 +297,11 @@
         var done = function () { HH.say($('join-msg'), 'คัดลอกแล้ว: ' + link, 'ok'); };
         if (navigator.clipboard) navigator.clipboard.writeText(link).then(done, function () { HH.say($('join-msg'), link, 'ok'); });
         else HH.say($('join-msg'), link, 'ok');
+      });
+      $('print-join-qr').addEventListener('click', function () {
+        if (!joinCode) return;
+        var qrPage = location.href.replace(/staff\/admin\.html.*$/, 'qr/');
+        window.open(qrPage + '?join=' + encodeURIComponent(joinCode), '_blank');
       });
       $('regen-join').addEventListener('click', function () { $('regen-confirm').hidden = false; });
       $('regen-no').addEventListener('click', function () { $('regen-confirm').hidden = true; });
